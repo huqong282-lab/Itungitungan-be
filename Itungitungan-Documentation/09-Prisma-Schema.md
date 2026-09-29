@@ -1,0 +1,484 @@
+# Prisma Schema — MVP
+
+## Itungitungan — Configurable Project Estimation & Quotation System
+
+> Dokumentasi implementasi database untuk Configurable Project Estimation & Quotation System. File sumber yang benar-benar dipakai Prisma tetap berada di `prisma/schema.prisma`.
+
+## Baseline
+
+- ID: CUID
+- Money: `Int` (Rupiah sebagai integer)
+- Estimated hours: `Int`
+- Percentage: `Decimal(5,2)`
+- Catalog deletion: soft delete melalui `isActive`
+- Quotation: `DRAFT` atau `FINAL`
+- Project: satu design, banyak hosting, banyak maintenance
+
+## Schema
+
+```prisma
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  DRAFT
+  QUOTED
+  ACCEPTED
+  REJECTED
+}
+
+enum QuotationStatus {
+  DRAFT
+  FINAL
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+  ONE_TIME
+}
+
+enum SelectionType {
+  SINGLE
+  MULTIPLE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  settings         DeveloperSettings?
+  sessions         Session[]
+  features         Feature[]
+  designs          Design[]
+  hostingPlans     HostingPlan[]
+  maintenancePlans MaintenancePlan[]
+  projects         Project[]
+}
+
+model DeveloperSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  developerRate           Int
+  workingHoursPerDay      Int     @default(8)
+  bufferPercentage        Decimal @default(20) @db.Decimal(5, 2)
+  defaultMarginPercentage Decimal @default(30) @db.Decimal(5, 2)
+  defaultRushPercentage   Decimal @default(30) @db.Decimal(5, 2)
+
+  freeRevisionCount       Int @default(2)
+  additionalRevisionPrice Int @default(0)
+
+  currency String @default("IDR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model Feature {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  name               String
+  description        String?
+  category           String?
+  baseEstimatedHours Int     @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  options         FeatureOption[]
+  projectFeatures ProjectFeature[]
+
+  @@index([userId, isActive])
+}
+
+model FeatureOption {
+  id        String @id @default(cuid())
+  featureId String
+
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  name          String
+  selectionType SelectionType
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  values            FeatureOptionValue[]
+  projectSelections ProjectFeatureSelection[]
+
+  @@index([featureId])
+  @@unique([featureId, name])
+}
+
+model FeatureOptionValue {
+  id              String @id @default(cuid())
+  featureOptionId String
+
+  featureOption FeatureOption @relation(fields: [featureOptionId], references: [id], onDelete: Cascade)
+
+  label         String
+  estimatedHours Int @default(0)
+
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectSelections ProjectFeatureSelection[]
+
+  @@index([featureOptionId, isActive])
+  @@unique([featureOptionId, label])
+}
+
+model Design {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  name        String
+  description String?
+  price       Int
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectDesigns ProjectDesign[]
+
+  @@index([userId, isActive])
+}
+
+model HostingPlan {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  provider      String
+  name          String
+  internalCost  Int
+  clientPrice   Int
+  billingPeriod BillingPeriod
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectHostings ProjectHosting[]
+
+  @@index([userId, isActive])
+}
+
+model MaintenancePlan {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  name          String
+  price         Int
+  billingPeriod BillingPeriod
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectMaintenances ProjectMaintenance[]
+
+  @@index([userId, isActive])
+}
+
+model Project {
+  id     String @id @default(cuid())
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  clientName  String
+  projectName String
+  logoUrl     String?
+  deadline    DateTime?
+
+  status ProjectStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  features     ProjectFeature[]
+  design       ProjectDesign?
+  hostings     ProjectHosting[]
+  maintenances ProjectMaintenance[]
+  quotations   Quotation[]
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+model ProjectFeature {
+  id        String @id @default(cuid())
+  projectId String
+  featureId String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Restrict)
+
+  overrideHours Int?
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  selections ProjectFeatureSelection[]
+
+  @@index([projectId])
+  @@index([featureId])
+  @@unique([projectId, featureId])
+}
+
+model ProjectFeatureSelection {
+  id               String @id @default(cuid())
+  projectFeatureId String
+
+  featureOptionId      String
+  featureOptionValueId String
+
+  projectFeature ProjectFeature @relation(fields: [projectFeatureId], references: [id], onDelete: Cascade)
+  featureOption FeatureOption @relation(fields: [featureOptionId], references: [id], onDelete: Restrict)
+  featureOptionValue FeatureOptionValue @relation(fields: [featureOptionValueId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectFeatureId])
+  @@index([featureOptionId])
+  @@index([featureOptionValueId])
+  @@unique([projectFeatureId, featureOptionId, featureOptionValueId])
+}
+
+model ProjectDesign {
+  id        String @id @default(cuid())
+  projectId String @unique
+  designId  String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  design Design @relation(fields: [designId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([designId])
+}
+
+model ProjectHosting {
+  id            String @id @default(cuid())
+  projectId     String
+  hostingPlanId String?
+
+  label          String  @default("Production")
+  clientProvided Boolean @default(false)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hostingPlan HostingPlan? @relation(fields: [hostingPlanId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([hostingPlanId])
+}
+
+model ProjectMaintenance {
+  id                String @id @default(cuid())
+  projectId         String
+  maintenancePlanId String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  maintenancePlan MaintenancePlan @relation(fields: [maintenancePlanId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([maintenancePlanId])
+  @@unique([projectId, maintenancePlanId])
+}
+
+model Quotation {
+  id        String @id @default(cuid())
+  projectId String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+
+  quotationNumber String @unique
+  version         Int
+  status          QuotationStatus @default(DRAFT)
+
+  clientNameSnapshot  String
+  projectNameSnapshot String
+  logoUrlSnapshot     String?
+  deadlineSnapshot    DateTime?
+
+  developerRateSnapshot       Int
+  workingHoursPerDaySnapshot  Int
+
+  developmentHours Int
+
+  bufferPercentage Decimal @db.Decimal(5, 2)
+  bufferedHours    Int
+  workingDays      Int
+
+  developmentCost Int
+  designCost      Int
+  hostingCost     Int
+  maintenanceCost Int
+
+  subtotal Int
+
+  marginPercentage Decimal @db.Decimal(5, 2)
+  marginAmount     Int
+
+  rushFeePercentage Decimal @db.Decimal(5, 2)
+  rushFeeAmount     Int
+
+  freeRevisionCount       Int
+  additionalRevisionPrice Int
+
+  finalPrice Int
+
+  finalizedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  features     QuotationFeature[]
+  design       QuotationDesign?
+  hostings     QuotationHosting[]
+  maintenances QuotationMaintenance[]
+
+  @@unique([projectId, version])
+  @@index([projectId, status])
+  @@index([createdAt])
+}
+
+model QuotationFeature {
+  id          String @id @default(cuid())
+  quotationId String
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  featureNameSnapshot String
+  baseHoursSnapshot   Int
+  estimatedHours      Int
+
+  developerRateSnapshot Int
+  developmentCost      Int
+
+  createdAt DateTime @default(now())
+
+  selections QuotationFeatureSelection[]
+
+  @@index([quotationId])
+}
+
+model QuotationFeatureSelection {
+  id                 String @id @default(cuid())
+  quotationFeatureId String
+
+  quotationFeature QuotationFeature @relation(fields: [quotationFeatureId], references: [id], onDelete: Cascade)
+
+  optionNameSnapshot String
+  valueLabelSnapshot String
+  hoursSnapshot      Int
+
+  createdAt DateTime @default(now())
+
+  @@index([quotationFeatureId])
+}
+
+model QuotationDesign {
+  id          String @id @default(cuid())
+  quotationId String @unique
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  nameSnapshot  String
+  priceSnapshot Int
+
+  createdAt DateTime @default(now())
+}
+
+model QuotationHosting {
+  id          String @id @default(cuid())
+  quotationId String
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  labelSnapshot     String
+  providerSnapshot  String?
+  planSnapshot      String?
+  internalCostSnapshot Int?
+  clientPriceSnapshot Int
+  clientProvided    Boolean
+  billingPeriodSnapshot BillingPeriod?
+
+  createdAt DateTime @default(now())
+
+  @@index([quotationId])
+}
+
+model QuotationMaintenance {
+  id          String @id @default(cuid())
+  quotationId String
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  nameSnapshot           String
+  priceSnapshot          Int
+  billingPeriodSnapshot  BillingPeriod
+
+  createdAt DateTime @default(now())
+
+  @@index([quotationId])
+}
+
+```
