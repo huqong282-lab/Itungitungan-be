@@ -17,4 +17,108 @@ import * as Prisma from './internal/prismaNamespaceBrowser.js'
 export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
-
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model DeveloperSettings
+ * 
+ */
+export type DeveloperSettings = Prisma.DeveloperSettingsModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model Feature
+ * 
+ */
+export type Feature = Prisma.FeatureModel
+/**
+ * Model FeatureOption
+ * 
+ */
+export type FeatureOption = Prisma.FeatureOptionModel
+/**
+ * Model FeatureOptionValue
+ * 
+ */
+export type FeatureOptionValue = Prisma.FeatureOptionValueModel
+/**
+ * Model Design
+ * 
+ */
+export type Design = Prisma.DesignModel
+/**
+ * Model HostingPlan
+ * 
+ */
+export type HostingPlan = Prisma.HostingPlanModel
+/**
+ * Model MaintenancePlan
+ * 
+ */
+export type MaintenancePlan = Prisma.MaintenancePlanModel
+/**
+ * Model Project
+ * 
+ */
+export type Project = Prisma.ProjectModel
+/**
+ * Model ProjectFeature
+ * 
+ */
+export type ProjectFeature = Prisma.ProjectFeatureModel
+/**
+ * Model ProjectFeatureSelection
+ * 
+ */
+export type ProjectFeatureSelection = Prisma.ProjectFeatureSelectionModel
+/**
+ * Model ProjectDesign
+ * 
+ */
+export type ProjectDesign = Prisma.ProjectDesignModel
+/**
+ * Model ProjectHosting
+ * 
+ */
+export type ProjectHosting = Prisma.ProjectHostingModel
+/**
+ * Model ProjectMaintenance
+ * 
+ */
+export type ProjectMaintenance = Prisma.ProjectMaintenanceModel
+/**
+ * Model Quotation
+ * 
+ */
+export type Quotation = Prisma.QuotationModel
+/**
+ * Model QuotationFeature
+ * 
+ */
+export type QuotationFeature = Prisma.QuotationFeatureModel
+/**
+ * Model QuotationFeatureSelection
+ * 
+ */
+export type QuotationFeatureSelection = Prisma.QuotationFeatureSelectionModel
+/**
+ * Model QuotationDesign
+ * 
+ */
+export type QuotationDesign = Prisma.QuotationDesignModel
+/**
+ * Model QuotationHosting
+ * 
+ */
+export type QuotationHosting = Prisma.QuotationHostingModel
+/**
+ * Model QuotationMaintenance
+ * 
+ */
+export type QuotationMaintenance = Prisma.QuotationMaintenanceModel

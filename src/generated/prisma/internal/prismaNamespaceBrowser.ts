@@ -51,7 +51,27 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-
+  User: 'User',
+  DeveloperSettings: 'DeveloperSettings',
+  Session: 'Session',
+  Feature: 'Feature',
+  FeatureOption: 'FeatureOption',
+  FeatureOptionValue: 'FeatureOptionValue',
+  Design: 'Design',
+  HostingPlan: 'HostingPlan',
+  MaintenancePlan: 'MaintenancePlan',
+  Project: 'Project',
+  ProjectFeature: 'ProjectFeature',
+  ProjectFeatureSelection: 'ProjectFeatureSelection',
+  ProjectDesign: 'ProjectDesign',
+  ProjectHosting: 'ProjectHosting',
+  ProjectMaintenance: 'ProjectMaintenance',
+  Quotation: 'Quotation',
+  QuotationFeature: 'QuotationFeature',
+  QuotationFeatureSelection: 'QuotationFeatureSelection',
+  QuotationDesign: 'QuotationDesign',
+  QuotationHosting: 'QuotationHosting',
+  QuotationMaintenance: 'QuotationMaintenance'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -68,4 +88,330 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  name: 'name',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const DeveloperSettingsScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  developerRate: 'developerRate',
+  workingHoursPerDay: 'workingHoursPerDay',
+  bufferPercentage: 'bufferPercentage',
+  defaultMarginPercentage: 'defaultMarginPercentage',
+  defaultRushPercentage: 'defaultRushPercentage',
+  freeRevisionCount: 'freeRevisionCount',
+  additionalRevisionPrice: 'additionalRevisionPrice',
+  currency: 'currency',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DeveloperSettingsScalarFieldEnum = (typeof DeveloperSettingsScalarFieldEnum)[keyof typeof DeveloperSettingsScalarFieldEnum]
+
+
+export const SessionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
+export const FeatureScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  category: 'category',
+  baseEstimatedHours: 'baseEstimatedHours',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FeatureScalarFieldEnum = (typeof FeatureScalarFieldEnum)[keyof typeof FeatureScalarFieldEnum]
+
+
+export const FeatureOptionScalarFieldEnum = {
+  id: 'id',
+  featureId: 'featureId',
+  name: 'name',
+  selectionType: 'selectionType',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FeatureOptionScalarFieldEnum = (typeof FeatureOptionScalarFieldEnum)[keyof typeof FeatureOptionScalarFieldEnum]
+
+
+export const FeatureOptionValueScalarFieldEnum = {
+  id: 'id',
+  featureOptionId: 'featureOptionId',
+  label: 'label',
+  estimatedHours: 'estimatedHours',
+  isDefault: 'isDefault',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FeatureOptionValueScalarFieldEnum = (typeof FeatureOptionValueScalarFieldEnum)[keyof typeof FeatureOptionValueScalarFieldEnum]
+
+
+export const DesignScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  price: 'price',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DesignScalarFieldEnum = (typeof DesignScalarFieldEnum)[keyof typeof DesignScalarFieldEnum]
+
+
+export const HostingPlanScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  provider: 'provider',
+  name: 'name',
+  internalCost: 'internalCost',
+  clientPrice: 'clientPrice',
+  billingPeriod: 'billingPeriod',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type HostingPlanScalarFieldEnum = (typeof HostingPlanScalarFieldEnum)[keyof typeof HostingPlanScalarFieldEnum]
+
+
+export const MaintenancePlanScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  price: 'price',
+  billingPeriod: 'billingPeriod',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MaintenancePlanScalarFieldEnum = (typeof MaintenancePlanScalarFieldEnum)[keyof typeof MaintenancePlanScalarFieldEnum]
+
+
+export const ProjectScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  clientName: 'clientName',
+  projectName: 'projectName',
+  logoUrl: 'logoUrl',
+  deadline: 'deadline',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectScalarFieldEnum = (typeof ProjectScalarFieldEnum)[keyof typeof ProjectScalarFieldEnum]
+
+
+export const ProjectFeatureScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  featureId: 'featureId',
+  overrideHours: 'overrideHours',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectFeatureScalarFieldEnum = (typeof ProjectFeatureScalarFieldEnum)[keyof typeof ProjectFeatureScalarFieldEnum]
+
+
+export const ProjectFeatureSelectionScalarFieldEnum = {
+  id: 'id',
+  projectFeatureId: 'projectFeatureId',
+  featureOptionId: 'featureOptionId',
+  featureOptionValueId: 'featureOptionValueId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectFeatureSelectionScalarFieldEnum = (typeof ProjectFeatureSelectionScalarFieldEnum)[keyof typeof ProjectFeatureSelectionScalarFieldEnum]
+
+
+export const ProjectDesignScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  designId: 'designId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDesignScalarFieldEnum = (typeof ProjectDesignScalarFieldEnum)[keyof typeof ProjectDesignScalarFieldEnum]
+
+
+export const ProjectHostingScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  hostingPlanId: 'hostingPlanId',
+  label: 'label',
+  clientProvided: 'clientProvided',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectHostingScalarFieldEnum = (typeof ProjectHostingScalarFieldEnum)[keyof typeof ProjectHostingScalarFieldEnum]
+
+
+export const ProjectMaintenanceScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  maintenancePlanId: 'maintenancePlanId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectMaintenanceScalarFieldEnum = (typeof ProjectMaintenanceScalarFieldEnum)[keyof typeof ProjectMaintenanceScalarFieldEnum]
+
+
+export const QuotationScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  quotationNumber: 'quotationNumber',
+  version: 'version',
+  status: 'status',
+  clientNameSnapshot: 'clientNameSnapshot',
+  projectNameSnapshot: 'projectNameSnapshot',
+  logoUrlSnapshot: 'logoUrlSnapshot',
+  deadlineSnapshot: 'deadlineSnapshot',
+  developerRateSnapshot: 'developerRateSnapshot',
+  workingHoursPerDaySnapshot: 'workingHoursPerDaySnapshot',
+  developmentHours: 'developmentHours',
+  bufferPercentage: 'bufferPercentage',
+  bufferedHours: 'bufferedHours',
+  workingDays: 'workingDays',
+  developmentCost: 'developmentCost',
+  designCost: 'designCost',
+  hostingCost: 'hostingCost',
+  maintenanceCost: 'maintenanceCost',
+  subtotal: 'subtotal',
+  marginPercentage: 'marginPercentage',
+  marginAmount: 'marginAmount',
+  rushFeePercentage: 'rushFeePercentage',
+  rushFeeAmount: 'rushFeeAmount',
+  freeRevisionCount: 'freeRevisionCount',
+  additionalRevisionPrice: 'additionalRevisionPrice',
+  finalPrice: 'finalPrice',
+  finalizedAt: 'finalizedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type QuotationScalarFieldEnum = (typeof QuotationScalarFieldEnum)[keyof typeof QuotationScalarFieldEnum]
+
+
+export const QuotationFeatureScalarFieldEnum = {
+  id: 'id',
+  quotationId: 'quotationId',
+  featureNameSnapshot: 'featureNameSnapshot',
+  baseHoursSnapshot: 'baseHoursSnapshot',
+  estimatedHours: 'estimatedHours',
+  developerRateSnapshot: 'developerRateSnapshot',
+  developmentCost: 'developmentCost',
+  createdAt: 'createdAt'
+} as const
+
+export type QuotationFeatureScalarFieldEnum = (typeof QuotationFeatureScalarFieldEnum)[keyof typeof QuotationFeatureScalarFieldEnum]
+
+
+export const QuotationFeatureSelectionScalarFieldEnum = {
+  id: 'id',
+  quotationFeatureId: 'quotationFeatureId',
+  optionNameSnapshot: 'optionNameSnapshot',
+  valueLabelSnapshot: 'valueLabelSnapshot',
+  hoursSnapshot: 'hoursSnapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type QuotationFeatureSelectionScalarFieldEnum = (typeof QuotationFeatureSelectionScalarFieldEnum)[keyof typeof QuotationFeatureSelectionScalarFieldEnum]
+
+
+export const QuotationDesignScalarFieldEnum = {
+  id: 'id',
+  quotationId: 'quotationId',
+  nameSnapshot: 'nameSnapshot',
+  priceSnapshot: 'priceSnapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type QuotationDesignScalarFieldEnum = (typeof QuotationDesignScalarFieldEnum)[keyof typeof QuotationDesignScalarFieldEnum]
+
+
+export const QuotationHostingScalarFieldEnum = {
+  id: 'id',
+  quotationId: 'quotationId',
+  labelSnapshot: 'labelSnapshot',
+  providerSnapshot: 'providerSnapshot',
+  planSnapshot: 'planSnapshot',
+  internalCostSnapshot: 'internalCostSnapshot',
+  clientPriceSnapshot: 'clientPriceSnapshot',
+  clientProvided: 'clientProvided',
+  billingPeriodSnapshot: 'billingPeriodSnapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type QuotationHostingScalarFieldEnum = (typeof QuotationHostingScalarFieldEnum)[keyof typeof QuotationHostingScalarFieldEnum]
+
+
+export const QuotationMaintenanceScalarFieldEnum = {
+  id: 'id',
+  quotationId: 'quotationId',
+  nameSnapshot: 'nameSnapshot',
+  priceSnapshot: 'priceSnapshot',
+  billingPeriodSnapshot: 'billingPeriodSnapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type QuotationMaintenanceScalarFieldEnum = (typeof QuotationMaintenanceScalarFieldEnum)[keyof typeof QuotationMaintenanceScalarFieldEnum]
+
+
+export const SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+} as const
+
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

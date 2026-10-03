@@ -12,6 +12,8 @@
 
 import * as process from 'node:process'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
+globalThis['__dirname'] = path.dirname(fileURLToPath(import.meta.url))
 
 import * as runtime from "@prisma/client/runtime/client"
 import * as $Enums from "./enums.js"
@@ -39,4 +41,108 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
-
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model DeveloperSettings
+ * 
+ */
+export type DeveloperSettings = Prisma.DeveloperSettingsModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model Feature
+ * 
+ */
+export type Feature = Prisma.FeatureModel
+/**
+ * Model FeatureOption
+ * 
+ */
+export type FeatureOption = Prisma.FeatureOptionModel
+/**
+ * Model FeatureOptionValue
+ * 
+ */
+export type FeatureOptionValue = Prisma.FeatureOptionValueModel
+/**
+ * Model Design
+ * 
+ */
+export type Design = Prisma.DesignModel
+/**
+ * Model HostingPlan
+ * 
+ */
+export type HostingPlan = Prisma.HostingPlanModel
+/**
+ * Model MaintenancePlan
+ * 
+ */
+export type MaintenancePlan = Prisma.MaintenancePlanModel
+/**
+ * Model Project
+ * 
+ */
+export type Project = Prisma.ProjectModel
+/**
+ * Model ProjectFeature
+ * 
+ */
+export type ProjectFeature = Prisma.ProjectFeatureModel
+/**
+ * Model ProjectFeatureSelection
+ * 
+ */
+export type ProjectFeatureSelection = Prisma.ProjectFeatureSelectionModel
+/**
+ * Model ProjectDesign
+ * 
+ */
+export type ProjectDesign = Prisma.ProjectDesignModel
+/**
+ * Model ProjectHosting
+ * 
+ */
+export type ProjectHosting = Prisma.ProjectHostingModel
+/**
+ * Model ProjectMaintenance
+ * 
+ */
+export type ProjectMaintenance = Prisma.ProjectMaintenanceModel
+/**
+ * Model Quotation
+ * 
+ */
+export type Quotation = Prisma.QuotationModel
+/**
+ * Model QuotationFeature
+ * 
+ */
+export type QuotationFeature = Prisma.QuotationFeatureModel
+/**
+ * Model QuotationFeatureSelection
+ * 
+ */
+export type QuotationFeatureSelection = Prisma.QuotationFeatureSelectionModel
+/**
+ * Model QuotationDesign
+ * 
+ */
+export type QuotationDesign = Prisma.QuotationDesignModel
+/**
+ * Model QuotationHosting
+ * 
+ */
+export type QuotationHosting = Prisma.QuotationHostingModel
+/**
+ * Model QuotationMaintenance
+ * 
+ */
+export type QuotationMaintenance = Prisma.QuotationMaintenanceModel

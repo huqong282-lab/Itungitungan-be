@@ -9,7 +9,36 @@
 * 🟢 You can import this file directly.
 */
 
+export const ProjectStatus = {
+  DRAFT: 'DRAFT',
+  QUOTED: 'QUOTED',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const QuotationStatus = {
+  DRAFT: 'DRAFT',
+  FINAL: 'FINAL'
+} as const
+
+export type QuotationStatus = (typeof QuotationStatus)[keyof typeof QuotationStatus]
+
+
+export const BillingPeriod = {
+  MONTHLY: 'MONTHLY',
+  YEARLY: 'YEARLY',
+  ONE_TIME: 'ONE_TIME'
+} as const
+
+export type BillingPeriod = (typeof BillingPeriod)[keyof typeof BillingPeriod]
+
+
+export const SelectionType = {
+  SINGLE: 'SINGLE',
+  MULTIPLE: 'MULTIPLE'
+} as const
+
+export type SelectionType = (typeof SelectionType)[keyof typeof SelectionType]
