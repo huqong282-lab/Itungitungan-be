@@ -3,11 +3,11 @@ services:
     image: postgres:18
     container_name: itungitungan-postgres
     environment:
-      POSTGRES_DB: project_estimator
+      POSTGRES_DB: Itungitungan
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
 
