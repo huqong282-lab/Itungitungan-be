@@ -270,6 +270,7 @@ export type FeatureOrderByWithRelationInput = {
 
 export type FeatureWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  userId_name?: Prisma.FeatureUserIdNameCompoundUniqueInput
   AND?: Prisma.FeatureWhereInput | Prisma.FeatureWhereInput[]
   OR?: Prisma.FeatureWhereInput[]
   NOT?: Prisma.FeatureWhereInput | Prisma.FeatureWhereInput[]
@@ -284,7 +285,7 @@ export type FeatureWhereUniqueInput = Prisma.AtLeast<{
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   options?: Prisma.FeatureOptionListRelationFilter
   projectFeatures?: Prisma.ProjectFeatureListRelationFilter
-}, "id">
+}, "id" | "userId_name">
 
 export type FeatureOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -417,6 +418,11 @@ export type FeatureListRelationFilter = {
 
 export type FeatureOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type FeatureUserIdNameCompoundUniqueInput = {
+  userId: string
+  name: string
 }
 
 export type FeatureCountOrderByAggregateInput = {
