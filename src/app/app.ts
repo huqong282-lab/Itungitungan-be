@@ -4,8 +4,8 @@ import type { FastifyError } from "fastify";
 import Fastify from "fastify";
 import { TypeBoxValidatorCompiler } from "@fastify/type-provider-typebox";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import { Type } from "typebox";
 import { env } from "../config/env.js";
+import { healthRoutes } from "../modules/health/health.routes.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -34,13 +34,7 @@ export function buildApp() {
     });
   });
 
-  app.get("/health", {
-    schema: {
-      response: {
-        200: Type.Object({ status: Type.Literal("ok") }),
-      },
-    },
-  }, async () => ({ status: "ok" as const }));
+  app.register(healthRoutes, { prefix: "/api" });
 
   return app;
 }
