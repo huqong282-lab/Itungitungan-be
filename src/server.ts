@@ -1,6 +1,12 @@
-import { prisma } from "./infrastructure/prisma/client.js";
+import { env } from "./config/env.js";
+import { buildApp } from "./app/app.js";
 
-const user = await prisma.user.findFirst();
+const app = buildApp();
 
-console.log("Prisma connection OK");
-console.log("User:", user);
+try {
+  await app.listen({ host: "0.0.0.0", port: env.PORT });
+} catch (error) {
+  app.log.error(error, "Failed to start server");
+  await app.close();
+  process.exitCode = 1;
+}
