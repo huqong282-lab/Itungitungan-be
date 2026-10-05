@@ -104,6 +104,7 @@ model Feature {
   options         FeatureOption[]
   projectFeatures ProjectFeature[]
 
+  @@unique([userId, name])
   @@index([userId, isActive])
 }
 
