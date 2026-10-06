@@ -16,6 +16,15 @@ export function createAuthRepository(prisma: PrismaClient) {
         select: { id: true },
       });
     },
+    findSessionByTokenHash(tokenHash: string) {
+      return prisma.session.findUnique({
+        where: { tokenHash },
+        select: {
+          expiresAt: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      });
+    },
     async register(data: RegisterInput & { passwordHash: string; sessionTokenHash: string; sessionExpiresAt: Date }) {
       return prisma.$transaction(async (tx) => {
         const user = await tx.user.create({

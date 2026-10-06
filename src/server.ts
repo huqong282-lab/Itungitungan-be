@@ -4,7 +4,8 @@ import { prisma } from "./infrastructure/prisma/client.js";
 import { createAuthRepository } from "./modules/auth/auth.repository.js";
 import { createAuthService } from "./modules/auth/auth.service.js";
 
-const app = buildApp(createAuthService(createAuthRepository(prisma)));
+const authRepository = createAuthRepository(prisma);
+const app = buildApp(createAuthService(authRepository), authRepository.findSessionByTokenHash);
 
 try {
   await app.listen({ host: "0.0.0.0", port: env.PORT });

@@ -4,6 +4,8 @@ export type AuthUser = {
   name: string;
 };
 
+export type AuthenticatedUser = AuthUser;
+
 export type LoginInput = {
   email: string;
   password: string;
