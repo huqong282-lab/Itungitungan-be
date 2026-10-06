@@ -5,7 +5,16 @@ import type { RegisterInput } from "./auth.types.js";
 export function createAuthRepository(prisma: PrismaClient) {
   return {
     findUserByEmail(email: string) {
-      return prisma.user.findUnique({ where: { email }, select: { id: true } });
+      return prisma.user.findUnique({
+        where: { email },
+        select: { id: true, name: true, email: true, passwordHash: true },
+      });
+    },
+    createSession(data: { userId: string; sessionTokenHash: string; sessionExpiresAt: Date }) {
+      return prisma.session.create({
+        data: { userId: data.userId, tokenHash: data.sessionTokenHash, expiresAt: data.sessionExpiresAt },
+        select: { id: true },
+      });
     },
     async register(data: RegisterInput & { passwordHash: string; sessionTokenHash: string; sessionExpiresAt: Date }) {
       return prisma.$transaction(async (tx) => {

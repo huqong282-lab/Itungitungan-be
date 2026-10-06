@@ -14,6 +14,7 @@ describe("POST /api/auth/register", () => {
 
   it("returns the user and sets an HTTP-only session cookie", async () => {
     const service: AuthService = {
+      login: async () => { throw new Error("unused"); },
       register: async () => ({
         user: { id: "user-1", name: "Hanz", email: "hanz@example.com" },
         sessionToken: "opaque-session-token",
@@ -36,7 +37,7 @@ describe("POST /api/auth/register", () => {
   });
 
   it("rejects invalid email and weak password", async () => {
-    app = buildApp({ register: async () => { throw new Error("should not be called"); } });
+    app = buildApp({ register: async () => { throw new Error("should not be called"); }, login: async () => { throw new Error("unused"); } });
 
     for (const payload of [
       { name: "Hanz", email: "bad-email", password: "strong-password" },
@@ -48,7 +49,7 @@ describe("POST /api/auth/register", () => {
   });
 
   it("returns 409 when the email already exists", async () => {
-    app = buildApp({ register: async () => { throw new AuthError("EMAIL_ALREADY_EXISTS"); } });
+    app = buildApp({ register: async () => { throw new AuthError("EMAIL_ALREADY_EXISTS"); }, login: async () => { throw new Error("unused"); } });
 
     const response = await app.inject({
       method: "POST",
