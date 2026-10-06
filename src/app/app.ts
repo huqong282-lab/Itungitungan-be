@@ -6,9 +6,10 @@ import { TypeBoxValidatorCompiler } from "@fastify/type-provider-typebox";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { env } from "../config/env.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
+import type { AuthService } from "../modules/auth/auth.service.js";
 import { healthRoutes } from "../modules/health/health.routes.js";
 
-export function buildApp() {
+export function buildApp(authService?: AuthService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -36,7 +37,10 @@ export function buildApp() {
   });
 
   app.register(healthRoutes, { prefix: "/api" });
-  app.register(authRoutes, { prefix: "/api/auth" });
+  app.register(authRoutes, {
+    prefix: "/api/auth",
+    service: authService ?? { register: async () => { throw new Error("Auth service is not configured"); } },
+  });
 
   return app;
 }
