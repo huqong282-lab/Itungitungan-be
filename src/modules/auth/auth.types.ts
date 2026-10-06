@@ -26,3 +26,5 @@ export class AuthError extends Error {
     this.name = "AuthError";
   }
 }
+
+export type RegisterResult = AuthResult;

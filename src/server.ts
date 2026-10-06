@@ -1,7 +1,10 @@
 import { env } from "./config/env.js";
 import { buildApp } from "./app/app.js";
+import { prisma } from "./infrastructure/prisma/client.js";
+import { createAuthRepository } from "./modules/auth/auth.repository.js";
+import { createAuthService } from "./modules/auth/auth.service.js";
 
-const app = buildApp();
+const app = buildApp(createAuthService(createAuthRepository(prisma)));
 
 try {
   await app.listen({ host: "0.0.0.0", port: env.PORT });

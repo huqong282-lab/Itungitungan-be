@@ -1,15 +1,34 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import type { AuthUser } from "./auth.types.js";
+import { initializeDefaultCatalog } from "../../infrastructure/seed/default-catalog.js";
+import type { RegisterInput } from "./auth.types.js";
 
-export type StoredAuthUser = AuthUser & { passwordHash: string };
-
-/** Database access for auth. HTTP and credential policy belong to higher layers. */
 export function createAuthRepository(prisma: PrismaClient) {
   return {
-    findUserByEmail(email: string): Promise<StoredAuthUser | null> {
-      return prisma.user.findUnique({
-        where: { email },
-        select: { id: true, email: true, name: true, passwordHash: true },
+    findUserByEmail(email: string) {
+      return prisma.user.findUnique({ where: { email }, select: { id: true } });
+    },
+    async register(data: RegisterInput & { passwordHash: string; sessionTokenHash: string; sessionExpiresAt: Date }) {
+      return prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email: data.email,
+            name: data.name,
+            passwordHash: data.passwordHash,
+            settings: { create: { developerRate: 0 } },
+          },
+          select: { id: true, email: true, name: true },
+        });
+
+        await initializeDefaultCatalog(tx, user.id);
+        await tx.session.create({
+          data: {
+            userId: user.id,
+            tokenHash: data.sessionTokenHash,
+            expiresAt: data.sessionExpiresAt,
+          },
+        });
+
+        return user;
       });
     },
   };
