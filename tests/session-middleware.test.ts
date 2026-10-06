@@ -18,6 +18,7 @@ describe("session middleware", () => {
     const unusedAuthService: AuthService = {
       register: async () => { throw new Error("unused"); },
       login: async () => { throw new Error("unused"); },
+      logout: async () => {},
     };
     app = buildApp(unusedAuthService, findSessionByTokenHash);
     app.get("/test/session", async (request) => ({ user: request.user }));

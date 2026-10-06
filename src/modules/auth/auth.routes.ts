@@ -28,4 +28,5 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       },
     },
   }, controller.login);
+  app.post("/logout", controller.logout);
 };

@@ -49,6 +49,7 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
     service: authService ?? {
       register: async () => { throw new Error("Auth service is not configured"); },
       login: async () => { throw new Error("Auth service is not configured"); },
+      logout: async () => { throw new Error("Auth service is not configured"); },
     },
   });
 
