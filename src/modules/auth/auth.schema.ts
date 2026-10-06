@@ -16,3 +16,9 @@ export const registerResponseSchema = Type.Object({
     user: Type.Object({ id: Type.String(), name: Type.String(), email: Type.String() }),
   }),
 });
+
+export const loginResponseSchema = Type.Object({
+  data: Type.Object({
+    user: Type.Object({ id: Type.String(), email: Type.String() }),
+  }),
+});

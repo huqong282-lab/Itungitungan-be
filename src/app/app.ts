@@ -39,7 +39,10 @@ export function buildApp(authService?: AuthService) {
   app.register(healthRoutes, { prefix: "/api" });
   app.register(authRoutes, {
     prefix: "/api/auth",
-    service: authService ?? { register: async () => { throw new Error("Auth service is not configured"); } },
+    service: authService ?? {
+      register: async () => { throw new Error("Auth service is not configured"); },
+      login: async () => { throw new Error("Auth service is not configured"); },
+    },
   });
 
   return app;
