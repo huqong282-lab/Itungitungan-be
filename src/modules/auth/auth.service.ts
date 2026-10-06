@@ -53,6 +53,11 @@ export function createAuthService(repository: AuthRepository) {
         sessionToken,
       };
     },
+    async logout(sessionToken: string | undefined): Promise<void> {
+      if (!sessionToken) return;
+      const sessionTokenHash = createHash("sha256").update(sessionToken).digest("hex");
+      await repository.deleteSessionByTokenHash(sessionTokenHash);
+    },
   };
 }
 

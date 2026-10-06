@@ -16,6 +16,9 @@ export function createAuthRepository(prisma: PrismaClient) {
         select: { id: true },
       });
     },
+    async deleteSessionByTokenHash(tokenHash: string): Promise<void> {
+      await prisma.session.deleteMany({ where: { tokenHash } });
+    },
     findSessionByTokenHash(tokenHash: string) {
       return prisma.session.findUnique({
         where: { tokenHash },

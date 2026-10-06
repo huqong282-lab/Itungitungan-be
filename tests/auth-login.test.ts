@@ -21,6 +21,7 @@ describe("POST /api/auth/login", () => {
         : null,
       createSession: async () => ({ id: "session-1" }),
       register: async () => ({ id: "user-1", email: "user@example.com", name: "User" }),
+      deleteSessionByTokenHash: async () => {},
     } as unknown as AuthRepository;
     app = buildApp(createAuthService(repository));
     return app;

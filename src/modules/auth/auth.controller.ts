@@ -43,5 +43,15 @@ export function createAuthController(service: AuthService) {
         throw error;
       }
     },
+    async logout(request: FastifyRequest, reply: FastifyReply) {
+      await service.logout(request.cookies[env.SESSION_COOKIE_NAME]);
+      reply.clearCookie(env.SESSION_COOKIE_NAME, {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      });
+      return reply.code(204).send();
+    },
   };
 }
