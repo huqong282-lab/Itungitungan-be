@@ -7,9 +7,11 @@ import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { env } from "../config/env.js";
 import { authRoutes } from "../modules/auth/auth.routes.js";
 import type { AuthService } from "../modules/auth/auth.service.js";
+import { createSessionMiddleware } from "../modules/auth/session.middleware.js";
+import type { SessionLookup } from "../modules/auth/session.middleware.js";
 import { healthRoutes } from "../modules/health/health.routes.js";
 
-export function buildApp(authService?: AuthService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -23,6 +25,11 @@ export function buildApp(authService?: AuthService) {
     credentials: true,
   });
   app.register(cookie);
+  app.decorateRequest("user", null);
+
+  if (sessionLookup) {
+    app.addHook("preHandler", createSessionMiddleware(sessionLookup));
+  }
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
