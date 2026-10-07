@@ -432,6 +432,8 @@ GET /api/settings
 
 Required.
 
+Settings diambil berdasarkan `userId` dari session. Jika session tidak valid, response `401 UNAUTHORIZED`; jika record settings tidak ditemukan, response `404 SETTINGS_NOT_FOUND`.
+
 #### Response
 
 ```json
@@ -439,12 +441,11 @@ Required.
   "data": {
     "developerRate": 75000,
     "workingHoursPerDay": 8,
-    "bufferPercentage": 20,
-    "defaultMarginPercentage": 30,
-    "defaultRushPercentage": 30,
+    "buffer": 20,
+    "margin": 30,
+    "rush": 30,
     "freeRevisionCount": 2,
-    "additionalRevisionPrice": 200000,
-    "currency": "IDR"
+    "additionalRevisionPrice": 200000
   }
 }
 ```
@@ -463,26 +464,27 @@ PATCH /api/settings
 {
   "developerRate": 75000,
   "workingHoursPerDay": 8,
-  "bufferPercentage": 20,
-  "defaultMarginPercentage": 30,
-  "defaultRushPercentage": 30,
+  "buffer": 20,
+  "margin": 30,
+  "rush": 30,
   "freeRevisionCount": 2,
-  "additionalRevisionPrice": 200000,
-  "currency": "IDR"
+  "additionalRevisionPrice": 200000
 }
 ```
+
+Semua field bersifat optional; update hanya mengubah field yang dikirim. Settings dibatasi pada user yang sedang login.
 
 #### Validation
 
 ```text
 developerRate >= 0
 workingHoursPerDay > 0
-bufferPercentage >= 0
-bufferPercentage <= 100
-defaultMarginPercentage >= 0
-defaultMarginPercentage <= 100
-defaultRushPercentage >= 0
-defaultRushPercentage <= 100
+buffer >= 0
+buffer <= 100
+margin >= 0
+margin <= 100
+rush >= 0
+rush <= 100
 freeRevisionCount >= 0
 additionalRevisionPrice >= 0
 ```
@@ -494,12 +496,11 @@ additionalRevisionPrice >= 0
   "data": {
     "developerRate": 75000,
     "workingHoursPerDay": 8,
-    "bufferPercentage": 20,
-    "defaultMarginPercentage": 30,
-    "defaultRushPercentage": 30,
+    "buffer": 20,
+    "margin": 30,
+    "rush": 30,
     "freeRevisionCount": 2,
-    "additionalRevisionPrice": 200000,
-    "currency": "IDR"
+    "additionalRevisionPrice": 200000
   }
 }
 ```

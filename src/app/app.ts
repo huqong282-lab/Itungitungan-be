@@ -10,8 +10,10 @@ import type { AuthService } from "../modules/auth/auth.service.js";
 import { createSessionMiddleware } from "../modules/auth/session.middleware.js";
 import type { SessionLookup } from "../modules/auth/session.middleware.js";
 import { healthRoutes } from "../modules/health/health.routes.js";
+import { settingsRoutes } from "../modules/settings/routes.js";
+import type { SettingsService } from "../modules/settings/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -51,6 +53,13 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       register: async () => { throw new Error("Auth service is not configured"); },
       login: async () => { throw new Error("Auth service is not configured"); },
       logout: async () => { throw new Error("Auth service is not configured"); },
+    },
+  });
+  app.register(settingsRoutes, {
+    prefix: "/api/settings",
+    service: settingsService ?? {
+      getSettings: async () => { throw new Error("Settings service is not configured"); },
+      updateSettings: async () => { throw new Error("Settings service is not configured"); },
     },
   });
 
