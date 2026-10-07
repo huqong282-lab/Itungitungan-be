@@ -5,13 +5,17 @@ import { createAuthRepository } from "./modules/auth/auth.repository.js";
 import { createAuthService } from "./modules/auth/auth.service.js";
 import { createSettingsRepository } from "./modules/settings/repository.js";
 import { createSettingsService } from "./modules/settings/service.js";
+import { createFeatureRepository } from "./modules/features/repository.js";
+import { createFeatureService } from "./modules/features/service.js";
 
 const authRepository = createAuthRepository(prisma);
 const settingsRepository = createSettingsRepository(prisma);
+const featureRepository = createFeatureRepository(prisma);
 const app = buildApp(
   createAuthService(authRepository),
   authRepository.findSessionByTokenHash,
   createSettingsService(settingsRepository),
+  createFeatureService(featureRepository),
 );
 
 try {

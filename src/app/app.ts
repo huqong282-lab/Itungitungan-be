@@ -12,8 +12,10 @@ import type { SessionLookup } from "../modules/auth/session.middleware.js";
 import { healthRoutes } from "../modules/health/health.routes.js";
 import { settingsRoutes } from "../modules/settings/routes.js";
 import type { SettingsService } from "../modules/settings/service.js";
+import { featureRoutes } from "../modules/features/routes.js";
+import type { FeatureService } from "../modules/features/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -60,6 +62,16 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
     service: settingsService ?? {
       getSettings: async () => { throw new Error("Settings service is not configured"); },
       updateSettings: async () => { throw new Error("Settings service is not configured"); },
+    },
+  });
+  app.register(featureRoutes, {
+    prefix: "/api/features",
+    service: featureService ?? {
+      listFeatures: async () => { throw new Error("Feature service is not configured"); },
+      getFeature: async () => { throw new Error("Feature service is not configured"); },
+      createFeature: async () => { throw new Error("Feature service is not configured"); },
+      updateFeature: async () => { throw new Error("Feature service is not configured"); },
+      updateFeatureStatus: async () => { throw new Error("Feature service is not configured"); },
     },
   });
 

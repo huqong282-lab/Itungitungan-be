@@ -515,6 +515,10 @@ additionalRevisionPrice >= 0
 GET /api/features
 ```
 
+#### Authentication
+
+Required. Feature yang dikembalikan selalu dibatasi berdasarkan `userId` pada session.
+
 Query:
 
 ```text
@@ -524,6 +528,8 @@ search
 category
 isActive
 ```
+
+Default `page=1` dan `pageSize=20`; `pageSize` maksimum `100`. `search` mencari pada name, description, dan category tanpa membedakan kapital. `category` menggunakan exact match dan `isActive` memfilter status secara exact.
 
 Example:
 
@@ -564,6 +570,10 @@ Hanya feature milik current user yang dikembalikan.
 GET /api/features/:featureId
 ```
 
+#### Authentication
+
+Required. Feature diambil berdasarkan ID dan `userId` pada session; ID yang tidak ditemukan atau bukan milik user menghasilkan `404 FEATURE_NOT_FOUND`.
+
 #### Response
 
 ```json
@@ -603,6 +613,10 @@ GET /api/features/:featureId
 POST /api/features
 ```
 
+#### Authentication
+
+Required. `userId` selalu berasal dari session dan tidak dapat dikirim melalui request body.
+
 #### Request
 
 ```json
@@ -627,6 +641,10 @@ POST /api/features
 ```http
 PATCH /api/features/:featureId
 ```
+
+#### Authentication
+
+Required. Hanya feature milik user pada session yang dapat diubah; ID yang tidak ditemukan atau bukan milik user menghasilkan `404 FEATURE_NOT_FOUND`.
 
 #### Request
 
@@ -654,6 +672,10 @@ Feature tidak di-hard-delete.
 ```http
 PATCH /api/features/:featureId/status
 ```
+
+#### Authentication
+
+Required. Status hanya dapat diubah pada feature milik user pada session; ID yang tidak ditemukan atau bukan milik user menghasilkan `404 FEATURE_NOT_FOUND`.
 
 #### Request
 
