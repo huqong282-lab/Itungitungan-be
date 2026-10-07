@@ -8,6 +8,9 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function createAuthService(repository: AuthRepository) {
   return {
+    async getCurrentUser(userId: string) {
+      return repository.findUserById(userId);
+    },
     async register(input: RegisterInput) {
       const normalizedInput = { ...input, email: input.email.trim().toLowerCase(), name: input.name.trim() };
       if (await repository.findUserByEmail(normalizedInput.email)) {

@@ -4,6 +4,12 @@ import type { RegisterInput } from "./auth.types.js";
 
 export function createAuthRepository(prisma: PrismaClient) {
   return {
+    findUserById(id: string) {
+      return prisma.user.findUnique({
+        where: { id },
+        select: { id: true, email: true, name: true, createdAt: true, updatedAt: true },
+      });
+    },
     findUserByEmail(email: string) {
       return prisma.user.findUnique({
         where: { email },

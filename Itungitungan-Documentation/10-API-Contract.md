@@ -379,14 +379,16 @@ Required.
 ```json
 {
   "data": {
-    "user": {
-      "id": "cuid...",
-      "name": "John Doe",
-      "email": "john@example.com"
-    }
+    "id": "cuid...",
+    "email": "john@example.com",
+    "name": "John Doe",
+    "createdAt": "2026-10-06T01:00:00.000Z",
+    "updatedAt": "2026-10-06T01:00:00.000Z"
   }
 }
 ```
+
+Returns `401 Unauthorized` when the session is missing, invalid, or expired. Password and session token hashes are never returned.
 
 ---
 
