@@ -42,4 +42,27 @@ describe("feature repository ownership", () => {
     expect(updateMany).toHaveBeenNthCalledWith(1, { where: { id: "feature-b", userId: "user-a" }, data: { name: "Changed" } });
     expect(updateMany).toHaveBeenNthCalledWith(2, { where: { id: "feature-b", userId: "user-a" }, data: { isActive: false } });
   });
+
+  it("creates an option only after finding its feature through the session owner", async () => {
+    const findFirst = vi.fn(async () => ({ id: "feature-a" }));
+    const create = vi.fn(async () => ({ id: "option-a", featureId: "feature-a", name: "OAuth", selectionType: "SINGLE" as const }));
+    const repository = createFeatureRepository({ feature: { findFirst }, featureOption: { create } } as unknown as PrismaClient);
+
+    await repository.createOptionForOwnedFeature("feature-a", "user-a", { name: "OAuth", selectionType: "SINGLE" });
+
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: "feature-a", userId: "user-a" }, select: { id: true } });
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ data: { name: "OAuth", selectionType: "SINGLE", featureId: "feature-a" } }));
+  });
+
+  it("scopes option updates through both feature and owner", async () => {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const findFirst = vi.fn(async () => ({ id: "option-a", featureId: "feature-a", name: "OAuth", selectionType: "MULTIPLE" as const }));
+    const repository = createFeatureRepository({ featureOption: { updateMany, findFirst } } as unknown as PrismaClient);
+
+    await repository.updateOptionOwnedByFeature("feature-a", "option-a", "user-a", { selectionType: "MULTIPLE" });
+
+    const where = { id: "option-a", featureId: "feature-a", feature: { is: { userId: "user-a" } } };
+    expect(updateMany).toHaveBeenCalledWith({ where, data: { selectionType: "MULTIPLE" } });
+    expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({ where }));
+  });
 });

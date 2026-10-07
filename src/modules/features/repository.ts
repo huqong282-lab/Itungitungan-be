@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import type { FeatureCreateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
+import type { FeatureCreateInput, FeatureOptionInput, FeatureOptionUpdateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
 
 const featureSummarySelect = {
   id: true,
@@ -56,6 +56,25 @@ export function createFeatureRepository(prisma: PrismaClient) {
       return prisma.feature.create({
         data: { ...input, userId },
         select: featureSummarySelect,
+      });
+    },
+    async createOptionForOwnedFeature(featureId: string, userId: string, input: FeatureOptionInput) {
+      const feature = await prisma.feature.findFirst({ where: { id: featureId, userId }, select: { id: true } });
+      if (!feature) return null;
+      return prisma.featureOption.create({
+        data: { ...input, featureId: feature.id },
+        select: { id: true, featureId: true, name: true, selectionType: true },
+      });
+    },
+    async updateOptionOwnedByFeature(featureId: string, optionId: string, userId: string, input: FeatureOptionUpdateInput) {
+      const result = await prisma.featureOption.updateMany({
+        where: { id: optionId, featureId, feature: { is: { userId } } },
+        data: input,
+      });
+      if (result.count === 0) return null;
+      return prisma.featureOption.findFirst({
+        where: { id: optionId, featureId, feature: { is: { userId } } },
+        select: { id: true, featureId: true, name: true, selectionType: true },
       });
     },
     async updateOwned(id: string, userId: string, input: FeatureUpdateInput) {

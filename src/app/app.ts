@@ -70,6 +70,8 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       listFeatures: async () => { throw new Error("Feature service is not configured"); },
       getFeature: async () => { throw new Error("Feature service is not configured"); },
       createFeature: async () => { throw new Error("Feature service is not configured"); },
+      createFeatureOption: async () => { throw new Error("Feature service is not configured"); },
+      updateFeatureOption: async () => { throw new Error("Feature service is not configured"); },
       updateFeature: async () => { throw new Error("Feature service is not configured"); },
       updateFeatureStatus: async () => { throw new Error("Feature service is not configured"); },
     },

@@ -4,7 +4,7 @@ import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
 import type { FeatureService } from "../src/modules/features/service.js";
-import { FeatureNotFoundError } from "../src/modules/features/types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError } from "../src/modules/features/types.js";
 
 const ownFeature = {
   id: "feature-a",
@@ -43,6 +43,8 @@ describe("feature routes", () => {
       listFeatures: async () => ({ data: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
       getFeature: async () => featureDetail,
       createFeature: async () => ownFeature,
+      createFeatureOption: async (_userId, featureId, input) => ({ id: "option-a", featureId, ...input }),
+      updateFeatureOption: async (_userId, featureId, optionId, input) => ({ id: optionId, featureId, name: input.name ?? "OAuth", selectionType: input.selectionType ?? "SINGLE" }),
       updateFeature: async () => ownFeature,
       updateFeatureStatus: async () => ({ id: ownFeature.id, isActive: false }),
       ...overrides,
@@ -165,5 +167,56 @@ describe("feature routes", () => {
     expect(updateResponse.json().data.name).toBe("Updated Feature");
     expect(statusResponse.statusCode).toBe(200);
     expect(statusResponse.json()).toEqual({ data: { id: "feature-a", isActive: false } });
+  });
+
+  it("creates and updates an option through its owned feature", async () => {
+    const createFeatureOption = vi.fn(async (_userId: string, featureId: string, input: { name: string; selectionType: "SINGLE" | "MULTIPLE" }) => ({ id: "option-a", featureId, ...input }));
+    const updateFeatureOption = vi.fn(async (_userId: string, featureId: string, optionId: string, input: { name?: string; selectionType?: "SINGLE" | "MULTIPLE" }) => ({ id: optionId, featureId, name: input.name ?? "OAuth", selectionType: input.selectionType ?? "SINGLE" }));
+    const testApp = createTestApp(unusedMethods({ createFeatureOption, updateFeatureOption }));
+
+    const created = await testApp.inject({
+      method: "POST",
+      url: "/api/features/feature-a/options",
+      headers: sessionHeaders(),
+      payload: { name: "OAuth", selectionType: "SINGLE", userId: "user-b" },
+    });
+    expect(created.statusCode).toBe(400);
+    expect(createFeatureOption).not.toHaveBeenCalled();
+
+    const createResponse = await testApp.inject({
+      method: "POST",
+      url: "/api/features/feature-a/options",
+      headers: sessionHeaders(),
+      payload: { name: "OAuth", selectionType: "SINGLE" },
+    });
+    const patchResponse = await testApp.inject({
+      method: "PATCH",
+      url: "/api/features/feature-a/options/option-a",
+      headers: sessionHeaders(),
+      payload: { selectionType: "MULTIPLE" },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createResponse.json().data.featureId).toBe("feature-a");
+    expect(createFeatureOption).toHaveBeenCalledWith("user-a", "feature-a", { name: "OAuth", selectionType: "SINGLE" });
+    expect(patchResponse.statusCode).toBe(200);
+    expect(patchResponse.json().data.selectionType).toBe("MULTIPLE");
+    expect(updateFeatureOption).toHaveBeenCalledWith("user-a", "feature-a", "option-a", { selectionType: "MULTIPLE" });
+  });
+
+  it("returns 404 for missing parent feature or option and 401 without session", async () => {
+    const createFeatureOption = vi.fn(async () => { throw new FeatureNotFoundError(); });
+    const updateFeatureOption = vi.fn(async () => { throw new FeatureOptionNotFoundError(); });
+    const testApp = createTestApp(unusedMethods({ createFeatureOption, updateFeatureOption }));
+
+    const createResponse = await testApp.inject({ method: "POST", url: "/api/features/foreign/options", headers: sessionHeaders(), payload: { name: "OAuth", selectionType: "SINGLE" } });
+    const patchResponse = await testApp.inject({ method: "PATCH", url: "/api/features/feature-a/options/foreign", headers: sessionHeaders(), payload: { name: "OAuth" } });
+    await testApp.close();
+    const noSessionApp = createTestApp(unusedMethods(), "user-a", false);
+    const unauthenticated = await noSessionApp.inject({ method: "POST", url: "/api/features/feature-a/options", payload: { name: "OAuth", selectionType: "SINGLE" } });
+
+    expect(createResponse.statusCode).toBe(404);
+    expect(patchResponse.statusCode).toBe(404);
+    expect(unauthenticated.statusCode).toBe(401);
   });
 });

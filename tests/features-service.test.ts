@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FeatureRepository } from "../src/modules/features/repository.js";
 import { createFeatureService } from "../src/modules/features/service.js";
-import { FeatureNotFoundError } from "../src/modules/features/types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError } from "../src/modules/features/types.js";
 
 const feature = {
   id: "feature-a",
@@ -58,5 +58,16 @@ describe("feature service ownership", () => {
     await expect(service.updateFeatureStatus("user-a", "feature-b", { isActive: false })).rejects.toBeInstanceOf(FeatureNotFoundError);
     expect(repository.updateOwned).toHaveBeenCalledWith("feature-b", "user-a", { name: "Changed" });
     expect(repository.updateStatusOwned).toHaveBeenCalledWith("feature-b", "user-a", { isActive: false });
+  });
+
+  it("rejects an option when its feature is not owned by the current user", async () => {
+    const repository = {
+      createOptionForOwnedFeature: vi.fn(async () => null),
+      updateOptionOwnedByFeature: vi.fn(async () => null),
+    } as unknown as FeatureRepository;
+    const service = createFeatureService(repository);
+
+    await expect(service.createFeatureOption("user-a", "feature-b", { name: "OAuth", selectionType: "SINGLE" })).rejects.toBeInstanceOf(FeatureNotFoundError);
+    await expect(service.updateFeatureOption("user-a", "feature-a", "option-b", { name: "OAuth" })).rejects.toBeInstanceOf(FeatureOptionNotFoundError);
   });
 });
