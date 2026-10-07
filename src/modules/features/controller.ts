@@ -1,9 +1,11 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { FeatureCreateInput, FeatureListQuery, FeatureStatusInput, FeatureUpdateInput } from "./types.js";
+import type { FeatureCreateInput, FeatureListQuery, FeatureOptionInput, FeatureOptionUpdateInput, FeatureStatusInput, FeatureUpdateInput } from "./types.js";
 import type { FeatureService } from "./service.js";
-import { FeatureNotFoundError } from "./types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError } from "./types.js";
 
 type FeatureIdParams = { id: string };
+type FeatureOptionFeatureParams = { featureId: string };
+type FeatureOptionParams = FeatureOptionFeatureParams & { optionId: string };
 
 export function createFeatureController(service: FeatureService) {
   return {
@@ -25,6 +27,24 @@ export function createFeatureController(service: FeatureService) {
       if (!request.user) return unauthorized(reply);
       await service.createFeature(request.user.id, request.body);
       return reply.code(201).send();
+    },
+    async createOption(request: FastifyRequest<{ Params: FeatureOptionFeatureParams; Body: FeatureOptionInput }>, reply: FastifyReply) {
+      if (!request.user) return unauthorized(reply);
+      try {
+        return reply.code(201).send({ data: await service.createFeatureOption(request.user.id, request.params.featureId, request.body) });
+      } catch (error) {
+        if (error instanceof FeatureNotFoundError) return notFound(reply);
+        throw error;
+      }
+    },
+    async patchOption(request: FastifyRequest<{ Params: FeatureOptionParams; Body: FeatureOptionUpdateInput }>, reply: FastifyReply) {
+      if (!request.user) return unauthorized(reply);
+      try {
+        return reply.code(200).send({ data: await service.updateFeatureOption(request.user.id, request.params.featureId, request.params.optionId, request.body) });
+      } catch (error) {
+        if (error instanceof FeatureOptionNotFoundError) return notFound(reply);
+        throw error;
+      }
     },
     async patch(request: FastifyRequest<{ Params: FeatureIdParams; Body: FeatureUpdateInput }>, reply: FastifyReply) {
       if (!request.user) return unauthorized(reply);

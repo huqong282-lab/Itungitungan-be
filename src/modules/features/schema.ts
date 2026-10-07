@@ -16,6 +16,32 @@ export const featureUpdateBodySchema = Type.Object({
 
 export const featureStatusBodySchema = Type.Object({ isActive: Type.Boolean() }, { additionalProperties: false });
 
+export const featureOptionCreateBodySchema = Type.Object({
+  name: Type.String({ minLength: 1 }),
+  selectionType: Type.Union([Type.Literal("SINGLE"), Type.Literal("MULTIPLE")]),
+}, { additionalProperties: false });
+
+export const featureOptionUpdateBodySchema = Type.Object({
+  name: Type.Optional(Type.String({ minLength: 1 })),
+  selectionType: Type.Optional(Type.Union([Type.Literal("SINGLE"), Type.Literal("MULTIPLE")])),
+}, { additionalProperties: false, minProperties: 1 });
+
+export const featureOptionParamsSchema = Type.Object({
+  featureId: Type.String({ minLength: 1 }),
+  optionId: Type.String({ minLength: 1 }),
+}, { additionalProperties: false });
+
+export const featureOptionFeatureParamsSchema = Type.Object({ featureId: Type.String({ minLength: 1 }) }, { additionalProperties: false });
+
+const featureOptionSchema = Type.Object({
+  id: Type.String(),
+  featureId: Type.String(),
+  name: Type.String(),
+  selectionType: Type.Union([Type.Literal("SINGLE"), Type.Literal("MULTIPLE")]),
+});
+
+export const featureOptionResponseSchema = Type.Object({ data: featureOptionSchema });
+
 export const featureIdParamsSchema = Type.Object({ id: Type.String({ minLength: 1 }) }, { additionalProperties: false });
 
 export const featureListQuerySchema = Type.Object({

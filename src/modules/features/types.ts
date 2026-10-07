@@ -1,3 +1,5 @@
+import type { SelectionType } from "../../generated/prisma/client.js";
+
 export type Feature = {
   id: string;
   name: string;
@@ -15,6 +17,13 @@ export type FeatureCreateInput = {
 };
 
 export type FeatureUpdateInput = Partial<FeatureCreateInput>;
+
+export type FeatureOptionInput = {
+  name: string;
+  selectionType: SelectionType;
+};
+
+export type FeatureOptionUpdateInput = Partial<FeatureOptionInput>;
 
 export type FeatureStatusInput = { isActive: boolean };
 
@@ -43,5 +52,11 @@ export class FeatureNotFoundError extends Error {
   constructor() {
     super("FEATURE_NOT_FOUND");
     this.name = "FeatureNotFoundError";
+  }
+}
+export class FeatureOptionNotFoundError extends Error {
+  constructor() {
+    super("FEATURE_OPTION_NOT_FOUND");
+    this.name = "FeatureOptionNotFoundError";
   }
 }
