@@ -1,5 +1,15 @@
 import { Type } from "typebox";
 
+export const currentUserResponseSchema = Type.Object({
+  data: Type.Object({
+    id: Type.String(),
+    email: Type.String(),
+    name: Type.String(),
+    createdAt: Type.String({ format: "date-time" }),
+    updatedAt: Type.String({ format: "date-time" }),
+  }),
+});
+
 export const loginBodySchema = Type.Object({
   email: Type.String({ format: "email", maxLength: 254 }),
   password: Type.String({ minLength: 1, maxLength: 128 }),

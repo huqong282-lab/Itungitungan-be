@@ -7,6 +7,16 @@ const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export function createAuthController(service: AuthService) {
   return {
+    async me(request: FastifyRequest, reply: FastifyReply) {
+      if (!request.user) {
+        return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      }
+      const user = await service.getCurrentUser(request.user.id);
+      if (!user) {
+        return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      }
+      return reply.code(200).send({ data: user });
+    },
     async login(request: FastifyRequest<{ Body: LoginInput }>, reply: FastifyReply) {
       try {
         const { user, sessionToken } = await service.login(request.body);

@@ -47,6 +47,7 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
   app.register(authRoutes, {
     prefix: "/api/auth",
     service: authService ?? {
+      getCurrentUser: async () => null,
       register: async () => { throw new Error("Auth service is not configured"); },
       login: async () => { throw new Error("Auth service is not configured"); },
       logout: async () => { throw new Error("Auth service is not configured"); },

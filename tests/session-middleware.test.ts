@@ -16,6 +16,7 @@ describe("session middleware", () => {
 
   function createTestApp(findSessionByTokenHash: SessionLookup) {
     const unusedAuthService: AuthService = {
+      getCurrentUser: async () => null,
       register: async () => { throw new Error("unused"); },
       login: async () => { throw new Error("unused"); },
       logout: async () => {},
