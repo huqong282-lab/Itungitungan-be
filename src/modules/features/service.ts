@@ -1,6 +1,6 @@
 import type { FeatureRepository } from "./repository.js";
-import type { FeatureCreateInput, FeatureListQuery, FeatureListResult, FeatureOptionInput, FeatureOptionUpdateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
-import { FeatureNotFoundError, FeatureOptionNotFoundError } from "./types.js";
+import type { FeatureCreateInput, FeatureListQuery, FeatureListResult, FeatureOptionInput, FeatureOptionUpdateInput, FeatureOptionValueInput, FeatureOptionValueUpdateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError, FeatureOptionValueNotFoundError } from "./types.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
@@ -43,6 +43,16 @@ export function createFeatureService(repository: FeatureRepository) {
       const option = await repository.updateOptionOwnedByFeature(featureId, optionId, userId, input);
       if (!option) throw new FeatureOptionNotFoundError();
       return option;
+    },
+    async createFeatureOptionValue(userId: string, featureId: string, optionId: string, input: FeatureOptionValueInput) {
+      const value = await repository.createOptionValueForOwnedOption(featureId, optionId, userId, input);
+      if (!value) throw new FeatureOptionNotFoundError();
+      return value;
+    },
+    async updateFeatureOptionValue(userId: string, featureId: string, optionId: string, valueId: string, input: FeatureOptionValueUpdateInput) {
+      const value = await repository.updateOptionValueOwnedByOption(featureId, optionId, valueId, userId, input);
+      if (!value) throw new FeatureOptionValueNotFoundError();
+      return value;
     },
     async updateFeature(userId: string, id: string, input: FeatureUpdateInput) {
       const feature = await repository.updateOwned(id, userId, input);

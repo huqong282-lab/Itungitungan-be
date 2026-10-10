@@ -1,11 +1,12 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { FeatureCreateInput, FeatureListQuery, FeatureOptionInput, FeatureOptionUpdateInput, FeatureStatusInput, FeatureUpdateInput } from "./types.js";
+import type { FeatureCreateInput, FeatureListQuery, FeatureOptionInput, FeatureOptionUpdateInput, FeatureOptionValueInput, FeatureOptionValueUpdateInput, FeatureStatusInput, FeatureUpdateInput } from "./types.js";
 import type { FeatureService } from "./service.js";
-import { FeatureNotFoundError, FeatureOptionNotFoundError } from "./types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError, FeatureOptionValueNotFoundError } from "./types.js";
 
 type FeatureIdParams = { id: string };
 type FeatureOptionFeatureParams = { featureId: string };
 type FeatureOptionParams = FeatureOptionFeatureParams & { optionId: string };
+type FeatureOptionValueParams = FeatureOptionParams & { valueId: string };
 
 export function createFeatureController(service: FeatureService) {
   return {
@@ -43,6 +44,24 @@ export function createFeatureController(service: FeatureService) {
         return reply.code(200).send({ data: await service.updateFeatureOption(request.user.id, request.params.featureId, request.params.optionId, request.body) });
       } catch (error) {
         if (error instanceof FeatureOptionNotFoundError) return notFound(reply);
+        throw error;
+      }
+    },
+    async createOptionValue(request: FastifyRequest<{ Params: FeatureOptionParams; Body: FeatureOptionValueInput }>, reply: FastifyReply) {
+      if (!request.user) return unauthorized(reply);
+      try {
+        return reply.code(201).send({ data: await service.createFeatureOptionValue(request.user.id, request.params.featureId, request.params.optionId, request.body) });
+      } catch (error) {
+        if (error instanceof FeatureNotFoundError || error instanceof FeatureOptionNotFoundError) return notFound(reply);
+        throw error;
+      }
+    },
+    async patchOptionValue(request: FastifyRequest<{ Params: FeatureOptionValueParams; Body: FeatureOptionValueUpdateInput }>, reply: FastifyReply) {
+      if (!request.user) return unauthorized(reply);
+      try {
+        return reply.code(200).send({ data: await service.updateFeatureOptionValue(request.user.id, request.params.featureId, request.params.optionId, request.params.valueId, request.body) });
+      } catch (error) {
+        if (error instanceof FeatureOptionNotFoundError || error instanceof FeatureOptionValueNotFoundError) return notFound(reply);
         throw error;
       }
     },

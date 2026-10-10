@@ -45,6 +45,8 @@ describe("feature routes", () => {
       createFeature: async () => ownFeature,
       createFeatureOption: async (_userId, featureId, input) => ({ id: "option-a", featureId, ...input }),
       updateFeatureOption: async (_userId, featureId, optionId, input) => ({ id: optionId, featureId, name: input.name ?? "OAuth", selectionType: input.selectionType ?? "SINGLE" }),
+      createFeatureOptionValue: async (_userId, _featureId, optionId, input) => ({ id: "value-a", featureOptionId: optionId, estimatedHours: 0, isDefault: false, isActive: true, ...input }),
+      updateFeatureOptionValue: async (_userId, _featureId, optionId, valueId, input) => ({ id: valueId, featureOptionId: optionId, label: input.label ?? "Stripe", estimatedHours: input.estimatedHours ?? 0, isDefault: input.isDefault ?? false, isActive: input.isActive ?? true }),
       updateFeature: async () => ownFeature,
       updateFeatureStatus: async () => ({ id: ownFeature.id, isActive: false }),
       ...overrides,
@@ -218,5 +220,52 @@ describe("feature routes", () => {
     expect(createResponse.statusCode).toBe(404);
     expect(patchResponse.statusCode).toBe(404);
     expect(unauthenticated.statusCode).toBe(401);
+  });
+
+  it("creates and updates values through the authenticated feature and option hierarchy", async () => {
+    const createFeatureOptionValue = vi.fn(async (_userId: string, _featureId: string, optionId: string, input: { label: string; estimatedHours?: number; isDefault?: boolean; isActive?: boolean }) => ({ id: "value-a", featureOptionId: optionId, estimatedHours: 0, isDefault: false, isActive: true, ...input }));
+    const updateFeatureOptionValue = vi.fn(async (_userId: string, _featureId: string, optionId: string, valueId: string, input: { label?: string; estimatedHours?: number; isDefault?: boolean; isActive?: boolean }) => ({ id: valueId, featureOptionId: optionId, label: input.label ?? "Stripe", estimatedHours: input.estimatedHours ?? 2, isDefault: input.isDefault ?? false, isActive: input.isActive ?? true }));
+    const testApp = createTestApp(unusedMethods({ createFeatureOptionValue, updateFeatureOptionValue }));
+
+    const created = await testApp.inject({ method: "POST", url: "/api/features/feature-a/options/option-a/values", headers: sessionHeaders(), payload: { label: "Stripe", estimatedHours: 2, userId: "user-b" } });
+    expect(created.statusCode).toBe(400);
+    expect(createFeatureOptionValue).not.toHaveBeenCalled();
+
+    const createResponse = await testApp.inject({ method: "POST", url: "/api/features/feature-a/options/option-a/values", headers: sessionHeaders(), payload: { label: "Stripe", estimatedHours: 2 } });
+    const patchResponse = await testApp.inject({ method: "PATCH", url: "/api/features/feature-a/options/option-a/values/value-a", headers: sessionHeaders(), payload: { label: "Updated Stripe", isDefault: true } });
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createResponse.json().data).toMatchObject({ featureOptionId: "option-a", label: "Stripe", estimatedHours: 2 });
+    expect(createFeatureOptionValue).toHaveBeenCalledWith("user-a", "feature-a", "option-a", { label: "Stripe", estimatedHours: 2 });
+    expect(patchResponse.statusCode).toBe(200);
+    expect(patchResponse.json().data).toMatchObject({ id: "value-a", label: "Updated Stripe", isDefault: true });
+    expect(updateFeatureOptionValue).toHaveBeenCalledWith("user-a", "feature-a", "option-a", "value-a", { label: "Updated Stripe", isDefault: true });
+  });
+
+  it("returns 404 for mismatched feature, option, value, or another user's feature", async () => {
+    const createFeatureOptionValue = vi.fn(async (_userId: string, featureId: string) => { if (featureId === "foreign-feature") throw new FeatureNotFoundError(); throw new FeatureOptionNotFoundError(); });
+    const updateFeatureOptionValue = vi.fn(async (_userId: string, _featureId: string, optionId: string, valueId: string) => { if (optionId === "foreign-option") throw new FeatureOptionNotFoundError(); if (valueId === "foreign-value") throw new FeatureOptionNotFoundError(); throw new FeatureOptionNotFoundError(); });
+    const testApp = createTestApp(unusedMethods({ createFeatureOptionValue, updateFeatureOptionValue }));
+
+    const foreignFeature = await testApp.inject({ method: "POST", url: "/api/features/foreign-feature/options/option-a/values", headers: sessionHeaders(), payload: { label: "x" } });
+    const mismatchedOption = await testApp.inject({ method: "POST", url: "/api/features/feature-a/options/foreign-option/values", headers: sessionHeaders(), payload: { label: "x" } });
+    const foreignValue = await testApp.inject({ method: "PATCH", url: "/api/features/feature-a/options/option-a/values/foreign-value", headers: sessionHeaders(), payload: { label: "x" } });
+    const mismatchedFeature = await testApp.inject({ method: "POST", url: "/api/features/feature-b/options/option-a/values", headers: sessionHeaders(), payload: { label: "x" } });
+
+    expect([foreignFeature.statusCode, mismatchedOption.statusCode, foreignValue.statusCode, mismatchedFeature.statusCode]).toEqual([404, 404, 404, 404]);
+  });
+
+  it("rejects invalid value inputs and unauthenticated requests", async () => {
+    const createFeatureOptionValue = vi.fn();
+    const updateFeatureOptionValue = vi.fn();
+    const testApp = createTestApp(unusedMethods({ createFeatureOptionValue, updateFeatureOptionValue }));
+    const invalidCreate = await testApp.inject({ method: "POST", url: "/api/features/feature-a/options/option-a/values", headers: sessionHeaders(), payload: { label: "", estimatedHours: -1 } });
+    const emptyPatch = await testApp.inject({ method: "PATCH", url: "/api/features/feature-a/options/option-a/values/value-a", headers: sessionHeaders(), payload: {} });
+    const unauthenticated = await testApp.inject({ method: "POST", url: "/api/features/feature-a/options/option-a/values", payload: { label: "x" } });
+    expect(invalidCreate.statusCode).toBe(400);
+    expect(emptyPatch.statusCode).toBe(400);
+    expect(unauthenticated.statusCode).toBe(401);
+    expect(createFeatureOptionValue).not.toHaveBeenCalled();
+    expect(updateFeatureOptionValue).not.toHaveBeenCalled();
   });
 });

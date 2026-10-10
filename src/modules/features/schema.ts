@@ -33,6 +33,26 @@ export const featureOptionParamsSchema = Type.Object({
 
 export const featureOptionFeatureParamsSchema = Type.Object({ featureId: Type.String({ minLength: 1 }) }, { additionalProperties: false });
 
+export const featureOptionValueParamsSchema = Type.Object({
+  featureId: Type.String({ minLength: 1 }),
+  optionId: Type.String({ minLength: 1 }),
+  valueId: Type.String({ minLength: 1 }),
+}, { additionalProperties: false });
+
+export const featureOptionValueCreateBodySchema = Type.Object({
+  label: Type.String({ minLength: 1 }),
+  estimatedHours: Type.Optional(Type.Integer({ minimum: 0 })),
+  isDefault: Type.Optional(Type.Boolean()),
+  isActive: Type.Optional(Type.Boolean()),
+}, { additionalProperties: false });
+
+export const featureOptionValueUpdateBodySchema = Type.Object({
+  label: Type.Optional(Type.String({ minLength: 1 })),
+  estimatedHours: Type.Optional(Type.Integer({ minimum: 0 })),
+  isDefault: Type.Optional(Type.Boolean()),
+  isActive: Type.Optional(Type.Boolean()),
+}, { additionalProperties: false, minProperties: 1 });
+
 const featureOptionSchema = Type.Object({
   id: Type.String(),
   featureId: Type.String(),
@@ -41,6 +61,15 @@ const featureOptionSchema = Type.Object({
 });
 
 export const featureOptionResponseSchema = Type.Object({ data: featureOptionSchema });
+
+export const featureOptionValueResponseSchema = Type.Object({ data: Type.Object({
+  id: Type.String(),
+  featureOptionId: Type.String(),
+  label: Type.String(),
+  estimatedHours: Type.Integer(),
+  isDefault: Type.Boolean(),
+  isActive: Type.Boolean(),
+}) });
 
 export const featureIdParamsSchema = Type.Object({ id: Type.String({ minLength: 1 }) }, { additionalProperties: false });
 
