@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
-import type { FeatureCreateInput, FeatureOptionInput, FeatureOptionUpdateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
+import type { FeatureCreateInput, FeatureOptionInput, FeatureOptionUpdateInput, FeatureOptionValueInput, FeatureOptionValueUpdateInput, FeatureStatusInput, FeatureUpdateInput, ResolvedFeatureListQuery } from "./types.js";
 
 const featureSummarySelect = {
   id: true,
@@ -75,6 +75,26 @@ export function createFeatureRepository(prisma: PrismaClient) {
       return prisma.featureOption.findFirst({
         where: { id: optionId, featureId, feature: { is: { userId } } },
         select: { id: true, featureId: true, name: true, selectionType: true },
+      });
+    },
+    async createOptionValueForOwnedOption(featureId: string, optionId: string, userId: string, input: FeatureOptionValueInput) {
+      const option = await prisma.featureOption.findFirst({
+        where: { id: optionId, featureId, feature: { is: { userId } } },
+        select: { id: true },
+      });
+      if (!option) return null;
+      return prisma.featureOptionValue.create({
+        data: { ...input, featureOptionId: option.id },
+        select: { id: true, featureOptionId: true, label: true, estimatedHours: true, isDefault: true, isActive: true },
+      });
+    },
+    async updateOptionValueOwnedByOption(featureId: string, optionId: string, valueId: string, userId: string, input: FeatureOptionValueUpdateInput) {
+      const where = { id: valueId, featureOptionId: optionId, featureOption: { is: { featureId, feature: { is: { userId } } } } };
+      const result = await prisma.featureOptionValue.updateMany({ where, data: input });
+      if (result.count === 0) return null;
+      return prisma.featureOptionValue.findFirst({
+        where,
+        select: { id: true, featureOptionId: true, label: true, estimatedHours: true, isDefault: true, isActive: true },
       });
     },
     async updateOwned(id: string, userId: string, input: FeatureUpdateInput) {

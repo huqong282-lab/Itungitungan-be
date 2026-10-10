@@ -65,4 +65,24 @@ describe("feature repository ownership", () => {
     expect(updateMany).toHaveBeenCalledWith({ where, data: { selectionType: "MULTIPLE" } });
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({ where }));
   });
+
+  it("creates and updates values only through the requested owned option", async () => {
+    const optionFindFirst = vi.fn(async () => ({ id: "option-a" }));
+    const valueCreate = vi.fn(async () => ({ id: "value-a", featureOptionId: "option-a", label: "Stripe", estimatedHours: 0, isDefault: false, isActive: true }));
+    const valueUpdateMany = vi.fn(async () => ({ count: 1 }));
+    const valueFindFirst = vi.fn(async () => ({ id: "value-a", featureOptionId: "option-a", label: "Updated", estimatedHours: 0, isDefault: false, isActive: true }));
+    const repository = createFeatureRepository({
+      featureOption: { findFirst: optionFindFirst },
+      featureOptionValue: { create: valueCreate, updateMany: valueUpdateMany, findFirst: valueFindFirst },
+    } as unknown as PrismaClient);
+
+    await repository.createOptionValueForOwnedOption("feature-a", "option-a", "user-a", { label: "Stripe" });
+    await repository.updateOptionValueOwnedByOption("feature-a", "option-a", "value-a", "user-a", { label: "Updated" });
+
+    expect(optionFindFirst).toHaveBeenCalledWith({ where: { id: "option-a", featureId: "feature-a", feature: { is: { userId: "user-a" } } }, select: { id: true } });
+    expect(valueCreate).toHaveBeenCalledWith(expect.objectContaining({ data: { label: "Stripe", featureOptionId: "option-a" } }));
+    const where = { id: "value-a", featureOptionId: "option-a", featureOption: { is: { featureId: "feature-a", feature: { is: { userId: "user-a" } } } } };
+    expect(valueUpdateMany).toHaveBeenCalledWith({ where, data: { label: "Updated" } });
+    expect(valueFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where }));
+  });
 });

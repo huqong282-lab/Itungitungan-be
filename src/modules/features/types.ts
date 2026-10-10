@@ -25,6 +25,15 @@ export type FeatureOptionInput = {
 
 export type FeatureOptionUpdateInput = Partial<FeatureOptionInput>;
 
+export type FeatureOptionValueInput = {
+  label: string;
+  estimatedHours?: number;
+  isDefault?: boolean;
+  isActive?: boolean;
+};
+
+export type FeatureOptionValueUpdateInput = Partial<FeatureOptionValueInput>;
+
 export type FeatureStatusInput = { isActive: boolean };
 
 export type FeatureListQuery = {
@@ -58,5 +67,12 @@ export class FeatureOptionNotFoundError extends Error {
   constructor() {
     super("FEATURE_OPTION_NOT_FOUND");
     this.name = "FeatureOptionNotFoundError";
+  }
+}
+
+export class FeatureOptionValueNotFoundError extends Error {
+  constructor() {
+    super("FEATURE_OPTION_VALUE_NOT_FOUND");
+    this.name = "FeatureOptionValueNotFoundError";
   }
 }

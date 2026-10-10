@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FeatureRepository } from "../src/modules/features/repository.js";
 import { createFeatureService } from "../src/modules/features/service.js";
-import { FeatureNotFoundError, FeatureOptionNotFoundError } from "../src/modules/features/types.js";
+import { FeatureNotFoundError, FeatureOptionNotFoundError, FeatureOptionValueNotFoundError } from "../src/modules/features/types.js";
 
 const feature = {
   id: "feature-a",
@@ -69,5 +69,18 @@ describe("feature service ownership", () => {
 
     await expect(service.createFeatureOption("user-a", "feature-b", { name: "OAuth", selectionType: "SINGLE" })).rejects.toBeInstanceOf(FeatureNotFoundError);
     await expect(service.updateFeatureOption("user-a", "feature-a", "option-b", { name: "OAuth" })).rejects.toBeInstanceOf(FeatureOptionNotFoundError);
+  });
+
+  it("scopes value creation and updates to the option, feature, and session owner", async () => {
+    const created = { id: "value-a", featureOptionId: "option-a", label: "Stripe" };
+    const repository = {
+      createOptionValueForOwnedOption: vi.fn(async () => created),
+      updateOptionValueOwnedByOption: vi.fn(async () => null),
+    } as unknown as FeatureRepository;
+    const service = createFeatureService(repository);
+    await expect(service.createFeatureOptionValue("user-a", "feature-a", "option-a", { label: "Stripe" })).resolves.toEqual(created);
+    await expect(service.updateFeatureOptionValue("user-a", "feature-a", "option-a", "value-b", { label: "Stripe" })).rejects.toBeInstanceOf(FeatureOptionValueNotFoundError);
+    expect(repository.createOptionValueForOwnedOption).toHaveBeenCalledWith("feature-a", "option-a", "user-a", { label: "Stripe" });
+    expect(repository.updateOptionValueOwnedByOption).toHaveBeenCalledWith("feature-a", "option-a", "value-b", "user-a", { label: "Stripe" });
   });
 });

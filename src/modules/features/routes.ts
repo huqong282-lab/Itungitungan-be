@@ -11,6 +11,10 @@ import {
   featureOptionParamsSchema,
   featureOptionResponseSchema,
   featureOptionUpdateBodySchema,
+  featureOptionValueCreateBodySchema,
+  featureOptionValueParamsSchema,
+  featureOptionValueResponseSchema,
+  featureOptionValueUpdateBodySchema,
   featureListQuerySchema,
   featureListResponseSchema,
   featureStatusBodySchema,
@@ -37,6 +41,20 @@ export const featureRoutes: FastifyPluginAsyncTypebox<FeatureRouteOptions> = asy
       response: { 200: featureOptionResponseSchema, 400: featureErrorSchema, 401: featureErrorSchema, 404: featureErrorSchema },
     },
   }, controller.patchOption);
+  app.post("/:featureId/options/:optionId/values", {
+    schema: {
+      params: featureOptionParamsSchema,
+      body: featureOptionValueCreateBodySchema,
+      response: { 201: featureOptionValueResponseSchema, 400: featureErrorSchema, 401: featureErrorSchema, 404: featureErrorSchema },
+    },
+  }, controller.createOptionValue);
+  app.patch("/:featureId/options/:optionId/values/:valueId", {
+    schema: {
+      params: featureOptionValueParamsSchema,
+      body: featureOptionValueUpdateBodySchema,
+      response: { 200: featureOptionValueResponseSchema, 400: featureErrorSchema, 401: featureErrorSchema, 404: featureErrorSchema },
+    },
+  }, controller.patchOptionValue);
   app.get("/", {
     schema: {
       querystring: featureListQuerySchema,
