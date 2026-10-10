@@ -9,17 +9,21 @@ import { createFeatureRepository } from "./modules/features/repository.js";
 import { createFeatureService } from "./modules/features/service.js";
 import { createDesignRepository } from "./modules/designs/repository.js";
 import { createDesignService } from "./modules/designs/service.js";
+import { createHostingPlanRepository } from "./modules/hosting-plans/repository.js";
+import { createHostingPlanService } from "./modules/hosting-plans/service.js";
 
 const authRepository = createAuthRepository(prisma);
 const settingsRepository = createSettingsRepository(prisma);
 const featureRepository = createFeatureRepository(prisma);
 const designRepository = createDesignRepository(prisma);
+const hostingPlanRepository = createHostingPlanRepository(prisma);
 const app = buildApp(
   createAuthService(authRepository),
   authRepository.findSessionByTokenHash,
   createSettingsService(settingsRepository),
   createFeatureService(featureRepository),
   createDesignService(designRepository),
+  createHostingPlanService(hostingPlanRepository),
 );
 
 try {

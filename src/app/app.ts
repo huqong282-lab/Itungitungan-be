@@ -16,8 +16,10 @@ import { featureRoutes } from "../modules/features/routes.js";
 import type { FeatureService } from "../modules/features/service.js";
 import { designRoutes } from "../modules/designs/routes.js";
 import type { DesignService } from "../modules/designs/service.js";
+import { hostingPlanRoutes } from "../modules/hosting-plans/routes.js";
+import type { HostingPlanService } from "../modules/hosting-plans/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -88,6 +90,16 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       createDesign: async () => { throw new Error("Design service is not configured"); },
       updateDesign: async () => { throw new Error("Design service is not configured"); },
       updateDesignStatus: async () => { throw new Error("Design service is not configured"); },
+    },
+  });
+  app.register(hostingPlanRoutes, {
+    prefix: "/api/hosting-plans",
+    service: hostingPlanService ?? {
+      listHostingPlans: async () => { throw new Error("Hosting plan service is not configured"); },
+      getHostingPlan: async () => { throw new Error("Hosting plan service is not configured"); },
+      createHostingPlan: async () => { throw new Error("Hosting plan service is not configured"); },
+      updateHostingPlan: async () => { throw new Error("Hosting plan service is not configured"); },
+      updateHostingPlanStatus: async () => { throw new Error("Hosting plan service is not configured"); },
     },
   });
 
