@@ -14,8 +14,10 @@ import { settingsRoutes } from "../modules/settings/routes.js";
 import type { SettingsService } from "../modules/settings/service.js";
 import { featureRoutes } from "../modules/features/routes.js";
 import type { FeatureService } from "../modules/features/service.js";
+import { designRoutes } from "../modules/designs/routes.js";
+import type { DesignService } from "../modules/designs/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -76,6 +78,16 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       updateFeatureOptionValue: async () => { throw new Error("Feature service is not configured"); },
       updateFeature: async () => { throw new Error("Feature service is not configured"); },
       updateFeatureStatus: async () => { throw new Error("Feature service is not configured"); },
+    },
+  });
+  app.register(designRoutes, {
+    prefix: "/api/designs",
+    service: designService ?? {
+      listDesigns: async () => { throw new Error("Design service is not configured"); },
+      getDesign: async () => { throw new Error("Design service is not configured"); },
+      createDesign: async () => { throw new Error("Design service is not configured"); },
+      updateDesign: async () => { throw new Error("Design service is not configured"); },
+      updateDesignStatus: async () => { throw new Error("Design service is not configured"); },
     },
   });
 

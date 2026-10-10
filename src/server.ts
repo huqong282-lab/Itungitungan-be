@@ -7,15 +7,19 @@ import { createSettingsRepository } from "./modules/settings/repository.js";
 import { createSettingsService } from "./modules/settings/service.js";
 import { createFeatureRepository } from "./modules/features/repository.js";
 import { createFeatureService } from "./modules/features/service.js";
+import { createDesignRepository } from "./modules/designs/repository.js";
+import { createDesignService } from "./modules/designs/service.js";
 
 const authRepository = createAuthRepository(prisma);
 const settingsRepository = createSettingsRepository(prisma);
 const featureRepository = createFeatureRepository(prisma);
+const designRepository = createDesignRepository(prisma);
 const app = buildApp(
   createAuthService(authRepository),
   authRepository.findSessionByTokenHash,
   createSettingsService(settingsRepository),
   createFeatureService(featureRepository),
+  createDesignService(designRepository),
 );
 
 try {
