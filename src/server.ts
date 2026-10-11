@@ -15,6 +15,8 @@ import { createMaintenancePlanRepository } from "./modules/maintenance-plans/rep
 import { createMaintenancePlanService } from "./modules/maintenance-plans/service.js";
 import { createProjectRepository } from "./modules/projects/repository.js";
 import { createProjectService } from "./modules/projects/service.js";
+import { createProjectFeatureRepository } from "./modules/project-features/repository.js";
+import { createProjectFeatureService } from "./modules/project-features/service.js";
 
 const authRepository = createAuthRepository(prisma);
 const settingsRepository = createSettingsRepository(prisma);
@@ -23,6 +25,7 @@ const designRepository = createDesignRepository(prisma);
 const hostingPlanRepository = createHostingPlanRepository(prisma);
 const maintenancePlanRepository = createMaintenancePlanRepository(prisma);
 const projectRepository = createProjectRepository(prisma);
+const projectFeatureRepository = createProjectFeatureRepository(prisma);
 const app = buildApp(
   createAuthService(authRepository),
   authRepository.findSessionByTokenHash,
@@ -32,6 +35,7 @@ const app = buildApp(
   createHostingPlanService(hostingPlanRepository),
   createMaintenancePlanService(maintenancePlanRepository),
   createProjectService(projectRepository),
+  createProjectFeatureService(projectFeatureRepository),
 );
 
 try {

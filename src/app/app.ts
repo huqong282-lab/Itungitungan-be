@@ -22,8 +22,10 @@ import { maintenancePlanRoutes } from "../modules/maintenance-plans/routes.js";
 import type { MaintenancePlanService } from "../modules/maintenance-plans/service.js";
 import { projectRoutes } from "../modules/projects/routes.js";
 import type { ProjectService } from "../modules/projects/service.js";
+import { projectFeatureRoutes } from "../modules/project-features/routes.js";
+import type { ProjectFeatureService } from "../modules/project-features/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -123,6 +125,15 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       getProject: async () => { throw new Error("Project service is not configured"); },
       createProject: async () => { throw new Error("Project service is not configured"); },
       updateProject: async () => { throw new Error("Project service is not configured"); },
+    },
+  });
+  app.register(projectFeatureRoutes, {
+    prefix: "/api/projects",
+    service: projectFeatureService ?? {
+      addFeature: async () => { throw new Error("Project feature service is not configured"); },
+      updateFeature: async () => { throw new Error("Project feature service is not configured"); },
+      removeFeature: async () => { throw new Error("Project feature service is not configured"); },
+      replaceSelections: async () => { throw new Error("Project feature service is not configured"); },
     },
   });
 
