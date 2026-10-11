@@ -24,8 +24,10 @@ import { projectRoutes } from "../modules/projects/routes.js";
 import type { ProjectService } from "../modules/projects/service.js";
 import { projectFeatureRoutes } from "../modules/project-features/routes.js";
 import type { ProjectFeatureService } from "../modules/project-features/service.js";
+import { projectDesignRoutes } from "../modules/project-designs/routes.js";
+import type { ProjectDesignService } from "../modules/project-designs/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -134,6 +136,13 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       updateFeature: async () => { throw new Error("Project feature service is not configured"); },
       removeFeature: async () => { throw new Error("Project feature service is not configured"); },
       replaceSelections: async () => { throw new Error("Project feature service is not configured"); },
+    },
+  });
+  app.register(projectDesignRoutes, {
+    prefix: "/api/projects",
+    service: projectDesignService ?? {
+      setDesign: async () => { throw new Error("Project design service is not configured"); },
+      removeDesign: async () => { throw new Error("Project design service is not configured"); },
     },
   });
 
