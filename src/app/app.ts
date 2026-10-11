@@ -18,8 +18,10 @@ import { designRoutes } from "../modules/designs/routes.js";
 import type { DesignService } from "../modules/designs/service.js";
 import { hostingPlanRoutes } from "../modules/hosting-plans/routes.js";
 import type { HostingPlanService } from "../modules/hosting-plans/service.js";
+import { maintenancePlanRoutes } from "../modules/maintenance-plans/routes.js";
+import type { MaintenancePlanService } from "../modules/maintenance-plans/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -100,6 +102,16 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       createHostingPlan: async () => { throw new Error("Hosting plan service is not configured"); },
       updateHostingPlan: async () => { throw new Error("Hosting plan service is not configured"); },
       updateHostingPlanStatus: async () => { throw new Error("Hosting plan service is not configured"); },
+    },
+  });
+  app.register(maintenancePlanRoutes, {
+    prefix: "/api/maintenance-plans",
+    service: maintenancePlanService ?? {
+      listMaintenancePlans: async () => { throw new Error("Maintenance plan service is not configured"); },
+      getMaintenancePlan: async () => { throw new Error("Maintenance plan service is not configured"); },
+      createMaintenancePlan: async () => { throw new Error("Maintenance plan service is not configured"); },
+      updateMaintenancePlan: async () => { throw new Error("Maintenance plan service is not configured"); },
+      updateMaintenancePlanStatus: async () => { throw new Error("Maintenance plan service is not configured"); },
     },
   });
 
