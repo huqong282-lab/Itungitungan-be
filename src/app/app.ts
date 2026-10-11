@@ -26,8 +26,10 @@ import { projectFeatureRoutes } from "../modules/project-features/routes.js";
 import type { ProjectFeatureService } from "../modules/project-features/service.js";
 import { projectDesignRoutes } from "../modules/project-designs/routes.js";
 import type { ProjectDesignService } from "../modules/project-designs/service.js";
+import { projectHostingRoutes } from "../modules/project-hostings/routes.js";
+import type { ProjectHostingService } from "../modules/project-hostings/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -143,6 +145,14 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
     service: projectDesignService ?? {
       setDesign: async () => { throw new Error("Project design service is not configured"); },
       removeDesign: async () => { throw new Error("Project design service is not configured"); },
+    },
+  });
+  app.register(projectHostingRoutes, {
+    prefix: "/api/projects",
+    service: projectHostingService ?? {
+      addHosting: async () => { throw new Error("Project hosting service is not configured"); },
+      updateHosting: async () => { throw new Error("Project hosting service is not configured"); },
+      removeHosting: async () => { throw new Error("Project hosting service is not configured"); },
     },
   });
 
