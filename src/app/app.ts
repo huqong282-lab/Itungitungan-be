@@ -20,8 +20,10 @@ import { hostingPlanRoutes } from "../modules/hosting-plans/routes.js";
 import type { HostingPlanService } from "../modules/hosting-plans/service.js";
 import { maintenancePlanRoutes } from "../modules/maintenance-plans/routes.js";
 import type { MaintenancePlanService } from "../modules/maintenance-plans/service.js";
+import { projectRoutes } from "../modules/projects/routes.js";
+import type { ProjectService } from "../modules/projects/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -112,6 +114,15 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       createMaintenancePlan: async () => { throw new Error("Maintenance plan service is not configured"); },
       updateMaintenancePlan: async () => { throw new Error("Maintenance plan service is not configured"); },
       updateMaintenancePlanStatus: async () => { throw new Error("Maintenance plan service is not configured"); },
+    },
+  });
+  app.register(projectRoutes, {
+    prefix: "/api/projects",
+    service: projectService ?? {
+      listProjects: async () => { throw new Error("Project service is not configured"); },
+      getProject: async () => { throw new Error("Project service is not configured"); },
+      createProject: async () => { throw new Error("Project service is not configured"); },
+      updateProject: async () => { throw new Error("Project service is not configured"); },
     },
   });
 
