@@ -28,8 +28,10 @@ import { projectDesignRoutes } from "../modules/project-designs/routes.js";
 import type { ProjectDesignService } from "../modules/project-designs/service.js";
 import { projectHostingRoutes } from "../modules/project-hostings/routes.js";
 import type { ProjectHostingService } from "../modules/project-hostings/service.js";
+import { projectMaintenanceRoutes } from "../modules/project-maintenances/routes.js";
+import type { ProjectMaintenanceService } from "../modules/project-maintenances/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService, projectMaintenanceService?: ProjectMaintenanceService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -153,6 +155,13 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
       addHosting: async () => { throw new Error("Project hosting service is not configured"); },
       updateHosting: async () => { throw new Error("Project hosting service is not configured"); },
       removeHosting: async () => { throw new Error("Project hosting service is not configured"); },
+    },
+  });
+  app.register(projectMaintenanceRoutes, {
+    prefix: "/api/projects",
+    service: projectMaintenanceService ?? {
+      addMaintenance: async () => { throw new Error("Project maintenance service is not configured"); },
+      removeMaintenance: async () => { throw new Error("Project maintenance service is not configured"); },
     },
   });
 
