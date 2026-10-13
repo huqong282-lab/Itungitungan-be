@@ -30,8 +30,10 @@ import { projectHostingRoutes } from "../modules/project-hostings/routes.js";
 import type { ProjectHostingService } from "../modules/project-hostings/service.js";
 import { projectMaintenanceRoutes } from "../modules/project-maintenances/routes.js";
 import type { ProjectMaintenanceService } from "../modules/project-maintenances/service.js";
+import { calculationRoutes } from "../modules/calculations/routes.js";
+import type { CalculationService } from "../modules/calculations/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService, projectMaintenanceService?: ProjectMaintenanceService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService, projectMaintenanceService?: ProjectMaintenanceService, calculationService?: CalculationService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -162,6 +164,12 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
     service: projectMaintenanceService ?? {
       addMaintenance: async () => { throw new Error("Project maintenance service is not configured"); },
       removeMaintenance: async () => { throw new Error("Project maintenance service is not configured"); },
+    },
+  });
+  app.register(calculationRoutes, {
+    prefix: "/api/projects",
+    service: calculationService ?? {
+      calculateProject: async () => { throw new Error("Calculation service is not configured"); },
     },
   });
 
