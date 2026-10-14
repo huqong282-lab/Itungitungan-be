@@ -32,8 +32,10 @@ import { projectMaintenanceRoutes } from "../modules/project-maintenances/routes
 import type { ProjectMaintenanceService } from "../modules/project-maintenances/service.js";
 import { calculationRoutes } from "../modules/calculations/routes.js";
 import type { CalculationService } from "../modules/calculations/service.js";
+import { quotationRoutes } from "../modules/quotations/routes.js";
+import type { QuotationService } from "../modules/quotations/service.js";
 
-export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService, projectMaintenanceService?: ProjectMaintenanceService, calculationService?: CalculationService) {
+export function buildApp(authService?: AuthService, sessionLookup?: SessionLookup, settingsService?: SettingsService, featureService?: FeatureService, designService?: DesignService, hostingPlanService?: HostingPlanService, maintenancePlanService?: MaintenancePlanService, projectService?: ProjectService, projectFeatureService?: ProjectFeatureService, projectDesignService?: ProjectDesignService, projectHostingService?: ProjectHostingService, projectMaintenanceService?: ProjectMaintenanceService, calculationService?: CalculationService, quotationService?: QuotationService) {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -170,6 +172,13 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
     prefix: "/api/projects",
     service: calculationService ?? {
       calculateProject: async () => { throw new Error("Calculation service is not configured"); },
+      calculateProjectSnapshot: async () => { throw new Error("Calculation service is not configured"); },
+    },
+  });
+  app.register(quotationRoutes, {
+    prefix: "/api/projects",
+    service: quotationService ?? {
+      createDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
     },
   });
 

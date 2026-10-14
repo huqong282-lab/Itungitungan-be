@@ -5,20 +5,23 @@ import type { CalculationProjectData, CalculationRepositoryPort, CalculationSett
 const project = {
   id: "project-a",
   userId: "user-a",
+  clientName: "Client A",
+  projectName: "Project A",
+  logoUrl: null,
   deadline: new Date("2026-10-22T00:00:00.000Z"),
   features: [{
     featureId: "feature-a",
     overrideHours: null,
-    feature: { id: "feature-a", userId: "user-a", baseEstimatedHours: 40 },
+    feature: { id: "feature-a", userId: "user-a", name: "Authentication", baseEstimatedHours: 40 },
     selections: [{
       featureOptionId: "option-a",
-      featureOption: { id: "option-a", featureId: "feature-a", selectionType: "SINGLE" as const },
-      featureOptionValue: { id: "value-a", featureOptionId: "option-a", estimatedHours: 4 },
+      featureOption: { id: "option-a", featureId: "feature-a", name: "Provider", selectionType: "SINGLE" as const },
+      featureOptionValue: { id: "value-a", featureOptionId: "option-a", label: "Custom", estimatedHours: 4 },
     }],
   }],
-  design: { design: { userId: "user-a", price: 1_000_000 } },
-  hostings: [{ clientProvided: false, hostingPlan: { userId: "user-a", clientPrice: 200_000 } }],
-  maintenances: [{ maintenancePlan: { userId: "user-a", price: 500_000 } }],
+  design: { design: { userId: "user-a", name: "Premium UI", price: 1_000_000 } },
+  hostings: [{ label: "Production", clientProvided: false, hostingPlan: { userId: "user-a", provider: "Cloud", name: "VPS", internalCost: 150_000, clientPrice: 200_000, billingPeriod: "MONTHLY" as const } }],
+  maintenances: [{ maintenancePlan: { userId: "user-a", name: "Monthly maintenance", price: 500_000, billingPeriod: "MONTHLY" as const } }],
 } satisfies CalculationProjectData;
 
 const settings = {
@@ -70,6 +73,28 @@ describe("project calculation service", () => {
     expect(repository.findSettingsForUser).toHaveBeenCalledWith("user-a");
   });
 
+  it("returns a snapshot breakdown from the same validated data and calculation", async () => {
+    const service = createCalculationService(createRepository(), () => new Date("2026-10-13T00:00:00.000Z"));
+    const result = await service.calculateProjectSnapshot("user-a", "project-a");
+
+    expect(result.calculation.estimatedHours).toBe(44);
+    expect(result.snapshot).toMatchObject({
+      clientName: "Client A",
+      projectName: "Project A",
+      developerRate: 100_000,
+      features: [{
+        name: "Authentication",
+        baseHours: 40,
+        estimatedHours: 44,
+        developmentCost: 4_400_000,
+        selections: [{ optionName: "Provider", valueLabel: "Custom", hours: 4 }],
+      }],
+      design: { name: "Premium UI", price: 1_000_000 },
+      hostings: [{ label: "Production", provider: "Cloud", plan: "VPS", internalCost: 150_000, clientPrice: 200_000, clientProvided: false, billingPeriod: "MONTHLY" }],
+      maintenances: [{ name: "Monthly maintenance", price: 500_000, billingPeriod: "MONTHLY" }],
+    });
+  });
+
   it("uses the requested marginPercentage while deriving all other inputs from the repository", async () => {
     const service = createCalculationService(createRepository(), () => new Date("2026-10-13T00:00:00.000Z"));
     const result = await service.calculateProject("user-a", "project-a", { marginPercentage: 0 });
@@ -80,7 +105,7 @@ describe("project calculation service", () => {
   });
 
   it("uses zero-cost hosting provided by the client", async () => {
-    const clientHostingProject = { ...project, hostings: [{ clientProvided: true, hostingPlan: null }] } satisfies CalculationProjectData;
+    const clientHostingProject = { ...project, hostings: [{ label: "Production", clientProvided: true, hostingPlan: null }] } satisfies CalculationProjectData;
     const service = createCalculationService(createRepository({ project: clientHostingProject }), () => new Date("2026-10-13T00:00:00.000Z"));
 
     await expect(service.calculateProject("user-a", "project-a")).resolves.toMatchObject({ hostingCost: 0 });
