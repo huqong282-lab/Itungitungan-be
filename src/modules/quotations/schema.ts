@@ -18,6 +18,10 @@ export const quotationResponseSchema = Type.Object({
   }),
 });
 
+export const recalculateQuotationParamsSchema = Type.Object({
+  quotationId: Type.String({ minLength: 1, pattern: "\\S" }),
+}, { additionalProperties: false });
+
 export const quotationErrorSchema = Type.Object({
   error: Type.Object({ code: Type.String(), message: Type.String() }),
 });

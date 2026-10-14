@@ -32,3 +32,17 @@ export class QuotationDataInvalidError extends Error {
     this.name = "QuotationDataInvalidError";
   }
 }
+
+export class QuotationNotFoundError extends Error {
+  constructor() {
+    super("Quotation not found");
+    this.name = "QuotationNotFoundError";
+  }
+}
+
+export class QuotationFinalizedError extends Error {
+  constructor() {
+    super("Final quotations cannot be modified.");
+    this.name = "QuotationFinalizedError";
+  }
+}
