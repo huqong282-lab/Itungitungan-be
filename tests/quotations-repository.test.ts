@@ -79,6 +79,29 @@ function createRepository(options: { hasDraft?: boolean; failCreate?: boolean; w
 }
 
 describe("quotation repository", () => {
+  it("queries only saved quotation snapshot fields with ownership through the project", async () => {
+    const findFirst = vi.fn(async () => ({ id: "quotation-a", features: [] }));
+    const prisma = { quotation: { findFirst } } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+
+    await expect(repository.findQuotationDetail("quotation-a", "user-a")).resolves.toEqual({ id: "quotation-a", features: [] });
+    expect(findFirst).toHaveBeenCalledOnce();
+    const args = findFirst.mock.calls[0]?.[0];
+    expect(args.where).toEqual({ id: "quotation-a", project: { userId: "user-a" } });
+    expect(args.select).toMatchObject({
+      clientNameSnapshot: true,
+      projectNameSnapshot: true,
+      features: { select: { featureNameSnapshot: true, selections: { select: { optionNameSnapshot: true, valueLabelSnapshot: true, hoursSnapshot: true } } } },
+      design: { select: { nameSnapshot: true, priceSnapshot: true } },
+      hostings: { select: { labelSnapshot: true, clientPriceSnapshot: true } },
+      maintenances: { select: { nameSnapshot: true, priceSnapshot: true } },
+    });
+    expect(args.select.features.select).not.toHaveProperty("feature");
+    expect(args.select.design.select).not.toHaveProperty("design");
+    expect(args.select.hostings.select).not.toHaveProperty("hostingPlan");
+    expect(args.select.maintenances.select).not.toHaveProperty("maintenancePlan");
+  });
+
   it("writes the DRAFT snapshot atomically and assigns next version and QT number", async () => {
     const { repository, transaction } = createRepository();
 

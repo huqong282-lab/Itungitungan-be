@@ -4,7 +4,7 @@ import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
 import type { QuotationService } from "../src/modules/quotations/service.js";
-import { DraftQuotationAlreadyExistsError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
+import { DraftQuotationAlreadyExistsError, QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
 
 const quotation = {
   id: "quotation-a",
@@ -14,6 +14,20 @@ const quotation = {
   finalPrice: 7_930_000,
   workingDays: 7,
   createdAt: new Date("2026-10-14T00:00:00.000Z"),
+};
+
+const quotationDetail = {
+  header: {
+    id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "DRAFT", clientName: "Snapshot Client", projectName: "Snapshot Project",
+    logoUrl: null, deadline: null, developerRate: 100_000, finalizedAt: null, createdAt: "2026-10-14T00:00:00.000Z", updatedAt: "2026-10-15T00:00:00.000Z",
+  },
+  features: [{ name: "Snapshot Feature", baseHours: 10, estimatedHours: 12, developerRate: 100_000, developmentCost: 1_200_000, selections: [{ optionName: "Snapshot Option", valueLabel: "Snapshot Value", hours: 2 }] }],
+  design: { name: "Snapshot Design", price: 300_000 },
+  hostings: [{ label: "Snapshot Hosting", provider: "Provider", plan: "Plan", internalCost: 70_000, clientPrice: 100_000, clientProvided: false, billingPeriod: "YEARLY" }],
+  maintenances: [{ name: "Snapshot Maintenance", price: 200_000, billingPeriod: "MONTHLY" }],
+  timeline: { estimatedHours: 12, bufferPercentage: 20, bufferedHours: 15, workingHoursPerDay: 8, workingDays: 2 },
+  pricing: { developmentCost: 1_200_000, designCost: 300_000, hostingCost: 100_000, maintenanceCost: 200_000, subtotal: 1_800_000, marginPercentage: 30, marginAmount: 540_000, rushFeePercentage: 10, rushFeeAmount: 234_000, finalPrice: 2_574_000 },
+  revisionPolicy: { freeRevisionCount: 2, additionalRevisionPrice: 50_000 },
 };
 
 describe("quotation routes", () => {
@@ -135,5 +149,31 @@ describe("quotation routes", () => {
     const response = await createTestApp(quotationService({ recalculateDraftQuotation })).inject({ method: "POST", url: "/api/quotations/quotation-a/recalculate", headers: headers() });
     expect(response.statusCode).toBe(422);
     expect(response.json().error.code).toBe("QUOTATION_FINALIZED");
+  });
+
+  it("returns all quotation detail categories from stored snapshots", async () => {
+    const getQuotationDetail = vi.fn(async () => quotationDetail);
+    const response = await createTestApp(quotationService({ getQuotationDetail })).inject({
+      method: "GET",
+      url: "/api/quotations/quotation-a",
+      headers: headers(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ data: quotationDetail });
+    expect(getQuotationDetail).toHaveBeenCalledWith("user-a", "quotation-a");
+  });
+
+  it("rejects unauthenticated quotation detail requests", async () => {
+    const getQuotationDetail = vi.fn(async () => quotationDetail);
+    const response = await createTestApp(quotationService({ getQuotationDetail }), false).inject({ method: "GET", url: "/api/quotations/quotation-a" });
+    expect(response.statusCode).toBe(401);
+    expect(getQuotationDetail).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for a missing or foreign quotation detail", async () => {
+    const getQuotationDetail = vi.fn(async () => { throw new QuotationDetailNotFoundError(); });
+    const response = await createTestApp(quotationService({ getQuotationDetail })).inject({ method: "GET", url: "/api/quotations/foreign-or-missing", headers: headers() });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("QUOTATION_NOT_FOUND");
   });
 });

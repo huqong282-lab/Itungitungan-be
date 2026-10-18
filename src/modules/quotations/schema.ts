@@ -18,6 +18,79 @@ export const quotationResponseSchema = Type.Object({
   }),
 });
 
+const nullableString = Type.Union([Type.String(), Type.Null()]);
+const nullableDateTime = Type.Union([Type.String({ format: "date-time" }), Type.Null()]);
+const billingPeriod = Type.Union([Type.Literal("MONTHLY"), Type.Literal("YEARLY"), Type.Literal("ONE_TIME")]);
+
+export const quotationDetailResponseSchema = Type.Object({
+  data: Type.Object({
+    header: Type.Object({
+      id: Type.String(),
+      quotationNumber: Type.String(),
+      version: Type.Integer({ minimum: 1 }),
+      status: Type.Union([Type.Literal("DRAFT"), Type.Literal("FINAL")]),
+      clientName: Type.String(),
+      projectName: Type.String(),
+      logoUrl: nullableString,
+      deadline: nullableDateTime,
+      developerRate: Type.Integer({ minimum: 0 }),
+      finalizedAt: nullableDateTime,
+      createdAt: Type.String({ format: "date-time" }),
+      updatedAt: Type.String({ format: "date-time" }),
+    }),
+    features: Type.Array(Type.Object({
+      name: Type.String(),
+      baseHours: Type.Integer({ minimum: 0 }),
+      estimatedHours: Type.Integer({ minimum: 0 }),
+      developerRate: Type.Integer({ minimum: 0 }),
+      developmentCost: Type.Integer({ minimum: 0 }),
+      selections: Type.Array(Type.Object({
+        optionName: Type.String(),
+        valueLabel: Type.String(),
+        hours: Type.Integer({ minimum: 0 }),
+      })),
+    })),
+    design: Type.Union([Type.Object({ name: Type.String(), price: Type.Integer({ minimum: 0 }) }), Type.Null()]),
+    hostings: Type.Array(Type.Object({
+      label: Type.String(),
+      provider: nullableString,
+      plan: nullableString,
+      internalCost: Type.Union([Type.Integer({ minimum: 0 }), Type.Null()]),
+      clientPrice: Type.Integer({ minimum: 0 }),
+      clientProvided: Type.Boolean(),
+      billingPeriod: Type.Union([billingPeriod, Type.Null()]),
+    })),
+    maintenances: Type.Array(Type.Object({
+      name: Type.String(),
+      price: Type.Integer({ minimum: 0 }),
+      billingPeriod,
+    })),
+    timeline: Type.Object({
+      estimatedHours: Type.Integer({ minimum: 0 }),
+      bufferPercentage: Type.Number({ minimum: 0 }),
+      bufferedHours: Type.Integer({ minimum: 0 }),
+      workingHoursPerDay: Type.Integer({ minimum: 1 }),
+      workingDays: Type.Integer({ minimum: 0 }),
+    }),
+    pricing: Type.Object({
+      developmentCost: Type.Integer({ minimum: 0 }),
+      designCost: Type.Integer({ minimum: 0 }),
+      hostingCost: Type.Integer({ minimum: 0 }),
+      maintenanceCost: Type.Integer({ minimum: 0 }),
+      subtotal: Type.Integer({ minimum: 0 }),
+      marginPercentage: Type.Number({ minimum: 0 }),
+      marginAmount: Type.Integer({ minimum: 0 }),
+      rushFeePercentage: Type.Number({ minimum: 0 }),
+      rushFeeAmount: Type.Integer({ minimum: 0 }),
+      finalPrice: Type.Integer({ minimum: 0 }),
+    }),
+    revisionPolicy: Type.Object({
+      freeRevisionCount: Type.Integer({ minimum: 0 }),
+      additionalRevisionPrice: Type.Integer({ minimum: 0 }),
+    }),
+  }),
+});
+
 export const recalculateQuotationParamsSchema = Type.Object({
   quotationId: Type.String({ minLength: 1, pattern: "\\S" }),
 }, { additionalProperties: false });

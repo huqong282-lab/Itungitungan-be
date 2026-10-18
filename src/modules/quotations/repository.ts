@@ -15,6 +15,77 @@ const quotationResponseSelect = {
 
 export function createQuotationRepository(prisma: PrismaClient) {
   return {
+    async findQuotationDetail(quotationId: string, userId: string) {
+      return prisma.quotation.findFirst({
+        where: { id: quotationId, project: { userId } },
+        select: {
+          id: true,
+          quotationNumber: true,
+          version: true,
+          status: true,
+          clientNameSnapshot: true,
+          projectNameSnapshot: true,
+          logoUrlSnapshot: true,
+          deadlineSnapshot: true,
+          developerRateSnapshot: true,
+          workingHoursPerDaySnapshot: true,
+          developmentHours: true,
+          bufferPercentage: true,
+          bufferedHours: true,
+          workingDays: true,
+          developmentCost: true,
+          designCost: true,
+          hostingCost: true,
+          maintenanceCost: true,
+          subtotal: true,
+          marginPercentage: true,
+          marginAmount: true,
+          rushFeePercentage: true,
+          rushFeeAmount: true,
+          freeRevisionCount: true,
+          additionalRevisionPrice: true,
+          finalPrice: true,
+          finalizedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          features: {
+            select: {
+              featureNameSnapshot: true,
+              baseHoursSnapshot: true,
+              estimatedHours: true,
+              developerRateSnapshot: true,
+              developmentCost: true,
+              selections: {
+                select: {
+                  optionNameSnapshot: true,
+                  valueLabelSnapshot: true,
+                  hoursSnapshot: true,
+                },
+              },
+            },
+          },
+          design: { select: { nameSnapshot: true, priceSnapshot: true } },
+          hostings: {
+            select: {
+              labelSnapshot: true,
+              providerSnapshot: true,
+              planSnapshot: true,
+              internalCostSnapshot: true,
+              clientPriceSnapshot: true,
+              clientProvided: true,
+              billingPeriodSnapshot: true,
+            },
+          },
+          maintenances: {
+            select: {
+              nameSnapshot: true,
+              priceSnapshot: true,
+              billingPeriodSnapshot: true,
+            },
+          },
+        },
+      });
+    },
     async createDraftQuotation(projectId: string, userId: string, input: CreateDraftQuotationInput): Promise<CreatedQuotation | null> {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
@@ -115,7 +186,7 @@ function isRetryableWriteConflict(error: unknown): boolean {
 }
 
 export type QuotationRepository = ReturnType<typeof createQuotationRepository>;
-export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation">;
+export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation" | "findQuotationDetail">;
 
 function snapshotData(input: CreateDraftQuotationInput) {
   const { calculation, snapshot } = input;
