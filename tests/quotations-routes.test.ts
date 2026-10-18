@@ -4,7 +4,7 @@ import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
 import type { QuotationService } from "../src/modules/quotations/service.js";
-import { DraftQuotationAlreadyExistsError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
+import { DraftQuotationAlreadyExistsError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
 
 const quotation = {
   id: "quotation-a",
@@ -102,5 +102,38 @@ describe("quotation routes", () => {
 
     expect(response.statusCode).toBe(400);
     expect(createDraftQuotation).not.toHaveBeenCalled();
+  });
+
+  it("recalculates a draft and returns the same summary shape", async () => {
+    const recalculateDraftQuotation = vi.fn(async () => quotation);
+    const response = await createTestApp(quotationService({ recalculateDraftQuotation })).inject({
+      method: "POST",
+      url: "/api/quotations/quotation-a/recalculate",
+      headers: headers(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ data: { ...quotation, createdAt: "2026-10-14T00:00:00.000Z" } });
+    expect(recalculateDraftQuotation).toHaveBeenCalledWith("user-a", "quotation-a");
+  });
+
+  it("rejects unauthenticated recalculation", async () => {
+    const recalculateDraftQuotation = vi.fn(async () => quotation);
+    const response = await createTestApp(quotationService({ recalculateDraftQuotation }), false).inject({ method: "POST", url: "/api/quotations/quotation-a/recalculate" });
+    expect(response.statusCode).toBe(401);
+    expect(recalculateDraftQuotation).not.toHaveBeenCalled();
+  });
+
+  it("masks missing or foreign quotations as 404", async () => {
+    const recalculateDraftQuotation = vi.fn(async () => { throw new QuotationNotFoundError(); });
+    const response = await createTestApp(quotationService({ recalculateDraftQuotation })).inject({ method: "POST", url: "/api/quotations/foreign-id/recalculate", headers: headers() });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("QUOTATION_NOT_FOUND");
+  });
+
+  it("returns the documented finalized error", async () => {
+    const recalculateDraftQuotation = vi.fn(async () => { throw new QuotationFinalizedError(); });
+    const response = await createTestApp(quotationService({ recalculateDraftQuotation })).inject({ method: "POST", url: "/api/quotations/quotation-a/recalculate", headers: headers() });
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.code).toBe("QUOTATION_FINALIZED");
   });
 });

@@ -72,4 +72,32 @@ describe("quotation service", () => {
     await expect(service.createDraftQuotation("user-a", "project-a")).rejects.toThrow("Calculation failed");
     expect(createDraftQuotation).not.toHaveBeenCalled();
   });
+
+  it("recalculates an owned draft using its project and the BE-037 snapshot", async () => {
+    const findQuotationForRecalculation = vi.fn(async () => ({ projectId: "project-a", status: "DRAFT" as const }));
+    const recalculateDraftQuotation = vi.fn(async () => created);
+    const calculateProjectSnapshot = vi.fn(async () => ({ calculation, snapshot }));
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findQuotationForRecalculation, recalculateDraftQuotation },
+      { calculateProjectSnapshot } as unknown as CalculationService,
+    );
+
+    await expect(service.recalculateDraftQuotation("user-a", "quotation-a")).resolves.toBe(created);
+    expect(findQuotationForRecalculation).toHaveBeenCalledWith("quotation-a", "user-a");
+    expect(calculateProjectSnapshot).toHaveBeenCalledWith("user-a", "project-a", {});
+    expect(recalculateDraftQuotation).toHaveBeenCalledWith("quotation-a", "user-a", { calculation, snapshot });
+  });
+
+  it("rejects FINAL quotations before recalculation", async () => {
+    const recalculateDraftQuotation = vi.fn(async () => created);
+    const calculateProjectSnapshot = vi.fn(async () => ({ calculation, snapshot }));
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findQuotationForRecalculation: async () => ({ projectId: "project-a", status: "FINAL" }), recalculateDraftQuotation },
+      { calculateProjectSnapshot } as unknown as CalculationService,
+    );
+
+    await expect(service.recalculateDraftQuotation("user-a", "quotation-a")).rejects.toThrow("Final quotations cannot be modified.");
+    expect(calculateProjectSnapshot).not.toHaveBeenCalled();
+    expect(recalculateDraftQuotation).not.toHaveBeenCalled();
+  });
 });

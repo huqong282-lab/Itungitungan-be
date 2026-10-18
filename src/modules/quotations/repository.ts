@@ -1,6 +1,6 @@
 import { Prisma, QuotationStatus, type PrismaClient } from "../../generated/prisma/client.js";
 import type { CreateDraftQuotationInput, CreatedQuotation } from "./types.js";
-import { DraftQuotationAlreadyExistsError, QuotationDataInvalidError } from "./types.js";
+import { DraftQuotationAlreadyExistsError, QuotationDataInvalidError, QuotationFinalizedError } from "./types.js";
 
 const QUOTATION_NUMBER_LOCK_ID = 781_234_567;
 const quotationResponseSelect = {
@@ -53,73 +53,13 @@ export function createQuotationRepository(prisma: PrismaClient) {
         }, 0) + 1;
         if (!Number.isSafeInteger(nextNumber)) throw new QuotationDataInvalidError();
         const quotationNumber = `QT-${String(nextNumber).padStart(6, "0")}`;
-        const { calculation, snapshot } = input;
-
         const created = await transaction.quotation.create({
           data: {
             projectId,
             quotationNumber,
             version,
             status: QuotationStatus.DRAFT,
-            clientNameSnapshot: snapshot.clientName,
-            projectNameSnapshot: snapshot.projectName,
-            logoUrlSnapshot: snapshot.logoUrl,
-            deadlineSnapshot: snapshot.deadline,
-            developerRateSnapshot: snapshot.developerRate,
-            workingHoursPerDaySnapshot: snapshot.workingHoursPerDay,
-            developmentHours: calculation.estimatedHours,
-            bufferPercentage: calculation.bufferPercentage,
-            bufferedHours: calculation.bufferedHours,
-            workingDays: calculation.workingDays,
-            developmentCost: calculation.developmentCost,
-            designCost: calculation.designCost,
-            hostingCost: calculation.hostingCost,
-            maintenanceCost: calculation.maintenanceCost,
-            subtotal: calculation.subtotal,
-            marginPercentage: calculation.marginPercentage,
-            marginAmount: calculation.marginAmount,
-            rushFeePercentage: calculation.rushFeePercentage,
-            rushFeeAmount: calculation.rushFeeAmount,
-            freeRevisionCount: calculation.revisionPolicy.freeRevisionCount,
-            additionalRevisionPrice: calculation.revisionPolicy.additionalRevisionPrice,
-            finalPrice: calculation.finalPrice,
-            features: {
-              create: snapshot.features.map((feature) => ({
-                featureNameSnapshot: feature.name,
-                baseHoursSnapshot: feature.baseHours,
-                estimatedHours: feature.estimatedHours,
-                developerRateSnapshot: snapshot.developerRate,
-                developmentCost: feature.developmentCost,
-                selections: {
-                  create: feature.selections.map((selection) => ({
-                    optionNameSnapshot: selection.optionName,
-                    valueLabelSnapshot: selection.valueLabel,
-                    hoursSnapshot: selection.hours,
-                  })),
-                },
-              })),
-            },
-            ...(snapshot.design && {
-              design: { create: { nameSnapshot: snapshot.design.name, priceSnapshot: snapshot.design.price } },
-            }),
-            hostings: {
-              create: snapshot.hostings.map((hosting) => ({
-                labelSnapshot: hosting.label,
-                providerSnapshot: hosting.provider,
-                planSnapshot: hosting.plan,
-                internalCostSnapshot: hosting.internalCost,
-                clientPriceSnapshot: hosting.clientPrice,
-                clientProvided: hosting.clientProvided,
-                billingPeriodSnapshot: hosting.billingPeriod,
-              })),
-            },
-            maintenances: {
-              create: snapshot.maintenances.map((maintenance) => ({
-                nameSnapshot: maintenance.name,
-                priceSnapshot: maintenance.price,
-                billingPeriodSnapshot: maintenance.billingPeriod,
-              })),
-            },
+            ...snapshotData(input),
           },
           select: quotationResponseSelect,
         });
@@ -132,6 +72,40 @@ export function createQuotationRepository(prisma: PrismaClient) {
       }
       throw new QuotationDataInvalidError();
     },
+    async findQuotationForRecalculation(quotationId: string, userId: string): Promise<{ projectId: string; status: "DRAFT" | "FINAL" } | null> {
+      const quotation = await prisma.quotation.findFirst({
+        where: { id: quotationId, project: { userId } },
+        select: { projectId: true, status: true },
+      });
+      return quotation ? { projectId: quotation.projectId, status: quotation.status } : null;
+    },
+    async recalculateDraftQuotation(quotationId: string, userId: string, input: CreateDraftQuotationInput): Promise<CreatedQuotation | null> {
+      return prisma.$transaction(async (transaction) => {
+        const quotation = await transaction.quotation.findFirst({
+          where: { id: quotationId, project: { userId } },
+          select: { id: true, projectId: true, status: true },
+        });
+        if (!quotation) return null;
+        if (quotation.status === QuotationStatus.FINAL) throw new QuotationFinalizedError();
+        const data = snapshotData(input);
+
+        const updated = await transaction.quotation.update({
+          where: { id: quotation.id },
+          data: {
+            ...data,
+            features: { deleteMany: {}, create: data.features.create },
+            design: {
+              ...(input.snapshot.design ? { upsert: { create: data.design!.create, update: data.design!.create } } : { delete: {} }),
+            },
+            hostings: { deleteMany: {}, create: data.hostings.create },
+            maintenances: { deleteMany: {}, create: data.maintenances.create },
+          },
+          select: quotationResponseSelect,
+        });
+        if (updated.status !== QuotationStatus.DRAFT) throw new QuotationDataInvalidError();
+        return { ...updated, status: "DRAFT" as const };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    },
   };
 }
 
@@ -141,4 +115,61 @@ function isRetryableWriteConflict(error: unknown): boolean {
 }
 
 export type QuotationRepository = ReturnType<typeof createQuotationRepository>;
-export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation">;
+export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation">;
+
+function snapshotData(input: CreateDraftQuotationInput) {
+  const { calculation, snapshot } = input;
+  return {
+    clientNameSnapshot: snapshot.clientName,
+    projectNameSnapshot: snapshot.projectName,
+    logoUrlSnapshot: snapshot.logoUrl,
+    deadlineSnapshot: snapshot.deadline,
+    developerRateSnapshot: snapshot.developerRate,
+    workingHoursPerDaySnapshot: snapshot.workingHoursPerDay,
+    developmentHours: calculation.estimatedHours,
+    bufferPercentage: calculation.bufferPercentage,
+    bufferedHours: calculation.bufferedHours,
+    workingDays: calculation.workingDays,
+    developmentCost: calculation.developmentCost,
+    designCost: calculation.designCost,
+    hostingCost: calculation.hostingCost,
+    maintenanceCost: calculation.maintenanceCost,
+    subtotal: calculation.subtotal,
+    marginPercentage: calculation.marginPercentage,
+    marginAmount: calculation.marginAmount,
+    rushFeePercentage: calculation.rushFeePercentage,
+    rushFeeAmount: calculation.rushFeeAmount,
+    freeRevisionCount: calculation.revisionPolicy.freeRevisionCount,
+    additionalRevisionPrice: calculation.revisionPolicy.additionalRevisionPrice,
+    finalPrice: calculation.finalPrice,
+    features: {
+      create: snapshot.features.map((feature) => ({
+        featureNameSnapshot: feature.name,
+        baseHoursSnapshot: feature.baseHours,
+        estimatedHours: feature.estimatedHours,
+        developerRateSnapshot: snapshot.developerRate,
+        developmentCost: feature.developmentCost,
+        selections: { create: feature.selections.map((selection) => ({
+          optionNameSnapshot: selection.optionName,
+          valueLabelSnapshot: selection.valueLabel,
+          hoursSnapshot: selection.hours,
+        })) },
+      })),
+    },
+    ...(snapshot.design ? { design: { create: { nameSnapshot: snapshot.design.name, priceSnapshot: snapshot.design.price } } } : {}),
+    hostings: { create: snapshot.hostings.map((hosting) => ({
+      labelSnapshot: hosting.label,
+      providerSnapshot: hosting.provider,
+      planSnapshot: hosting.plan,
+      internalCostSnapshot: hosting.internalCost,
+      clientPriceSnapshot: hosting.clientPrice,
+      clientProvided: hosting.clientProvided,
+      billingPeriodSnapshot: hosting.billingPeriod,
+    })) },
+    maintenances: { create: snapshot.maintenances.map((maintenance) => ({
+      nameSnapshot: maintenance.name,
+      priceSnapshot: maintenance.price,
+      billingPeriodSnapshot: maintenance.billingPeriod,
+    })) },
+  };
+}

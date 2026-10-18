@@ -126,4 +126,77 @@ describe("quotation repository", () => {
     expect(getAttempts()).toBe(2);
     expect(transaction.quotation.create).toHaveBeenCalledOnce();
   });
+
+  it("atomically replaces snapshot data while retaining quotation identity and version", async () => {
+    const updated = { ...result, quotationNumber: "QT-000001", version: 1 };
+    const transaction = {
+      quotation: {
+        findFirst: vi.fn(async () => ({ id: "quotation-a", projectId: "project-a", status: "DRAFT" })),
+        update: vi.fn(async () => updated),
+      },
+    };
+    const prisma = {
+      quotation: { findFirst: vi.fn(async () => ({ projectId: "project-a", status: "DRAFT" })) },
+      $transaction: vi.fn(async (callback: (tx: typeof transaction) => Promise<CreatedQuotation | null>) => callback(transaction)),
+    } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+
+    await expect(repository.findQuotationForRecalculation("quotation-a", "user-a")).resolves.toEqual({ projectId: "project-a", status: "DRAFT" });
+    await expect(repository.recalculateDraftQuotation("quotation-a", "user-a", input)).resolves.toEqual(updated);
+    expect(transaction.quotation.findFirst).toHaveBeenCalledWith({
+      where: { id: "quotation-a", project: { userId: "user-a" } },
+      select: { id: true, projectId: true, status: true },
+    });
+    const updateArgs = transaction.quotation.update.mock.calls[0]?.[0];
+    expect(updateArgs).toMatchObject({
+      where: { id: "quotation-a" },
+      data: {
+        developmentHours: 44,
+        bufferedHours: 53,
+        finalPrice: 7_930_000,
+        features: { deleteMany: {}, create: [{
+          featureNameSnapshot: "Authentication",
+          baseHoursSnapshot: 40,
+          estimatedHours: 44,
+          developerRateSnapshot: 100_000,
+          developmentCost: 4_400_000,
+          selections: { create: [{ optionNameSnapshot: "Provider", valueLabelSnapshot: "Custom", hoursSnapshot: 4 }] },
+        }] },
+      },
+    });
+    expect(updateArgs.data).not.toHaveProperty("quotationNumber");
+    expect(updateArgs.data).not.toHaveProperty("version");
+    expect(updateArgs.data).not.toHaveProperty("projectId");
+  });
+
+  it("does not update FINAL quotations", async () => {
+    const transaction = {
+      quotation: {
+        findFirst: vi.fn(async () => ({ id: "quotation-a", projectId: "project-a", status: "FINAL" })),
+        update: vi.fn(async () => result),
+      },
+    };
+    const prisma = { $transaction: vi.fn(async (callback: (tx: typeof transaction) => Promise<CreatedQuotation | null>) => callback(transaction)) } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+    await expect(repository.recalculateDraftQuotation("quotation-a", "user-a", input)).rejects.toThrow("Final quotations cannot be modified.");
+    expect(transaction.quotation.update).not.toHaveBeenCalled();
+  });
+
+  it("does not commit when snapshot replacement fails", async () => {
+    let committed = false;
+    const transaction = {
+      quotation: {
+        findFirst: vi.fn(async () => ({ id: "quotation-a", projectId: "project-a", status: "DRAFT" })),
+        update: vi.fn(async () => { throw new Error("snapshot write failed"); }),
+      },
+    };
+    const prisma = { $transaction: vi.fn(async (callback: (tx: typeof transaction) => Promise<CreatedQuotation | null>) => {
+      const value = await callback(transaction);
+      committed = true;
+      return value;
+    }) } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+    await expect(repository.recalculateDraftQuotation("quotation-a", "user-a", input)).rejects.toThrow("snapshot write failed");
+    expect(committed).toBe(false);
+  });
 });
