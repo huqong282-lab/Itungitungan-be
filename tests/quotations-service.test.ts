@@ -100,4 +100,58 @@ describe("quotation service", () => {
     expect(calculateProjectSnapshot).not.toHaveBeenCalled();
     expect(recalculateDraftQuotation).not.toHaveBeenCalled();
   });
+
+  it("maps quotation snapshot fields into detail without running a calculation", async () => {
+    const persisted = {
+      id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "DRAFT",
+      clientNameSnapshot: "Snapshot Client", projectNameSnapshot: "Snapshot Project", logoUrlSnapshot: null,
+      deadlineSnapshot: null, developerRateSnapshot: 100_000, workingHoursPerDaySnapshot: 8,
+      developmentHours: 12, bufferPercentage: { toNumber: () => 20 }, bufferedHours: 15, workingDays: 2,
+      developmentCost: 1_200_000, designCost: 300_000, hostingCost: 100_000, maintenanceCost: 200_000,
+      subtotal: 1_800_000, marginPercentage: { toNumber: () => 30 }, marginAmount: 540_000,
+      rushFeePercentage: { toNumber: () => 10 }, rushFeeAmount: 234_000,
+      freeRevisionCount: 2, additionalRevisionPrice: 50_000, finalPrice: 2_574_000,
+      finalizedAt: null, createdAt: new Date("2026-10-14T00:00:00.000Z"), updatedAt: new Date("2026-10-15T00:00:00.000Z"),
+      features: [{ featureNameSnapshot: "Snapshot Feature", baseHoursSnapshot: 10, estimatedHours: 12, developerRateSnapshot: 100_000, developmentCost: 1_200_000,
+        selections: [{ optionNameSnapshot: "Snapshot Option", valueLabelSnapshot: "Snapshot Value", hoursSnapshot: 2 }] }],
+      design: { nameSnapshot: "Snapshot Design", priceSnapshot: 300_000 },
+      hostings: [{ labelSnapshot: "Snapshot Hosting", providerSnapshot: "Snapshot Provider", planSnapshot: "Snapshot Plan", internalCostSnapshot: 70_000, clientPriceSnapshot: 100_000, clientProvided: false, billingPeriodSnapshot: "YEARLY" }],
+      maintenances: [{ nameSnapshot: "Snapshot Maintenance", priceSnapshot: 200_000, billingPeriodSnapshot: "MONTHLY" }],
+    };
+    const findQuotationDetail = vi.fn(async () => persisted);
+    const calculateProjectSnapshot = vi.fn(async () => ({ calculation, snapshot }));
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findQuotationForRecalculation: async () => null, recalculateDraftQuotation: async () => null, findQuotationDetail },
+      { calculateProjectSnapshot } as unknown as CalculationService,
+    );
+
+    await expect(service.getQuotationDetail("user-a", "quotation-a")).resolves.toEqual({
+      header: {
+        id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "DRAFT", clientName: "Snapshot Client", projectName: "Snapshot Project",
+        logoUrl: null, deadline: null, developerRate: 100_000, finalizedAt: null,
+        createdAt: "2026-10-14T00:00:00.000Z", updatedAt: "2026-10-15T00:00:00.000Z",
+      },
+      features: [{ name: "Snapshot Feature", baseHours: 10, estimatedHours: 12, developerRate: 100_000, developmentCost: 1_200_000,
+        selections: [{ optionName: "Snapshot Option", valueLabel: "Snapshot Value", hours: 2 }] }],
+      design: { name: "Snapshot Design", price: 300_000 },
+      hostings: [{ label: "Snapshot Hosting", provider: "Snapshot Provider", plan: "Snapshot Plan", internalCost: 70_000, clientPrice: 100_000, clientProvided: false, billingPeriod: "YEARLY" }],
+      maintenances: [{ name: "Snapshot Maintenance", price: 200_000, billingPeriod: "MONTHLY" }],
+      timeline: { estimatedHours: 12, bufferPercentage: 20, bufferedHours: 15, workingHoursPerDay: 8, workingDays: 2 },
+      pricing: {
+        developmentCost: 1_200_000, designCost: 300_000, hostingCost: 100_000, maintenanceCost: 200_000, subtotal: 1_800_000,
+        marginPercentage: 30, marginAmount: 540_000, rushFeePercentage: 10, rushFeeAmount: 234_000, finalPrice: 2_574_000,
+      },
+      revisionPolicy: { freeRevisionCount: 2, additionalRevisionPrice: 50_000 },
+    });
+    expect(findQuotationDetail).toHaveBeenCalledWith("quotation-a", "user-a");
+    expect(calculateProjectSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("returns not found for a missing or foreign quotation detail", async () => {
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findQuotationForRecalculation: async () => null, recalculateDraftQuotation: async () => null, findQuotationDetail: async () => null },
+      { calculateProjectSnapshot: vi.fn() } as unknown as CalculationService,
+    );
+    await expect(service.getQuotationDetail("user-a", "foreign-or-missing")).rejects.toThrow("Quotation not found");
+  });
 });

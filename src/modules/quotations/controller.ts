@@ -8,6 +8,7 @@ import {
 import {
   DraftQuotationAlreadyExistsError,
   QuotationFinalizedError,
+  QuotationDetailNotFoundError,
   QuotationNotFoundError,
   QuotationDataInvalidError,
   QuotationProjectNotFoundError,
@@ -15,6 +16,7 @@ import {
 
 type CreateQuotationRequest = FastifyRequest<{ Params: { projectId: string }; Body: Record<string, never> }>;
 type RecalculateQuotationRequest = FastifyRequest<{ Params: { quotationId: string } }>;
+type QuotationDetailRequest = FastifyRequest<{ Params: { quotationId: string } }>;
 
 export function createQuotationController(service: QuotationService) {
   return {
@@ -59,6 +61,18 @@ export function createQuotationController(service: QuotationService) {
         }
         if (error instanceof CalculationDataInvalidError || error instanceof QuotationDataInvalidError || error instanceof RangeError) {
           return reply.code(422).send({ error: { code: "QUOTATION_INVALID", message: "Project cannot be quoted with its current data" } });
+        }
+        throw error;
+      }
+    },
+    async detail(request: QuotationDetailRequest, reply: FastifyReply) {
+      if (!request.user) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      try {
+        const data = await service.getQuotationDetail(request.user.id, request.params.quotationId);
+        return reply.code(200).send({ data });
+      } catch (error) {
+        if (error instanceof QuotationDetailNotFoundError) {
+          return reply.code(404).send({ error: { code: "QUOTATION_NOT_FOUND", message: "Quotation not found" } });
         }
         throw error;
       }
