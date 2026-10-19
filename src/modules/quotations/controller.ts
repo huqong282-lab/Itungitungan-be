@@ -15,6 +15,7 @@ import {
   QuotationProjectNotFoundError,
 } from "./types.js";
 import type { QuotationListQuery } from "./types.js";
+import { createQuotationPdf, quotationPdfFilename } from "./pdf.js";
 
 type CreateQuotationRequest = FastifyRequest<{ Params: { projectId: string }; Body: Record<string, never> }>;
 type RecalculateQuotationRequest = FastifyRequest<{ Params: { quotationId: string } }>;
@@ -107,6 +108,23 @@ export function createQuotationController(service: QuotationService) {
       try {
         const data = await service.getQuotationDetail(request.user.id, request.params.quotationId);
         return reply.code(200).send({ data });
+      } catch (error) {
+        if (error instanceof QuotationDetailNotFoundError) {
+          return reply.code(404).send({ error: { code: "QUOTATION_NOT_FOUND", message: "Quotation not found" } });
+        }
+        throw error;
+      }
+    },
+    async pdf(request: QuotationDetailRequest, reply: FastifyReply) {
+      if (!request.user) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      try {
+        const quotation = await service.getQuotationDetail(request.user.id, request.params.quotationId);
+        const pdf = await createQuotationPdf(quotation);
+        const filename = quotationPdfFilename(quotation.header.quotationNumber, quotation.header.version);
+        return reply.code(200)
+          .type("application/pdf")
+          .header("Content-Disposition", `attachment; filename="${filename}"`)
+          .send(pdf);
       } catch (error) {
         if (error instanceof QuotationDetailNotFoundError) {
           return reply.code(404).send({ error: { code: "QUOTATION_NOT_FOUND", message: "Quotation not found" } });

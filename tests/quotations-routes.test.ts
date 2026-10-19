@@ -30,6 +30,15 @@ const quotationDetail = {
   revisionPolicy: { freeRevisionCount: 2, additionalRevisionPrice: 50_000 },
 };
 
+function extractUncompressedPdfText(payload: Buffer): string {
+  return [...payload.toString("latin1").matchAll(/BT([\s\S]*?)ET/g)]
+    .map(([, textObject]) => [...textObject!.matchAll(/<([0-9a-f]{2,})>/gi)]
+      .map(([, hexadecimal]) => Buffer.from(hexadecimal!, "hex"))
+      .reduce((text, bytes) => Buffer.concat([text, bytes]), Buffer.alloc(0))
+      .toString("latin1"))
+    .join(" ");
+}
+
 describe("quotation routes", () => {
   let app: FastifyInstance | undefined;
   afterEach(async () => { await app?.close(); app = undefined; });
@@ -270,5 +279,69 @@ describe("quotation routes", () => {
     const response = await createTestApp(quotationService({ getQuotationDetail })).inject({ method: "GET", url: "/api/quotations/foreign-or-missing", headers: headers() });
     expect(response.statusCode).toBe(404);
     expect(response.json().error.code).toBe("QUOTATION_NOT_FOUND");
+  });
+
+  it("rejects unauthenticated PDF requests before reading quotation data", async () => {
+    const getQuotationDetail = vi.fn(async () => quotationDetail);
+    const response = await createTestApp(quotationService({ getQuotationDetail }), false).inject({
+      method: "GET", url: "/api/quotations/quotation-a/pdf",
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json().error.code).toBe("UNAUTHORIZED");
+    expect(getQuotationDetail).not.toHaveBeenCalled();
+  });
+
+  it.each(["DRAFT", "FINAL"] as const)("returns a snapshot PDF for a %s quotation", async (status) => {
+    const snapshot = structuredClone(quotationDetail);
+    snapshot.header.status = status;
+    snapshot.header.finalizedAt = status === "FINAL" ? "2026-10-19T00:00:00.000Z" : null;
+    const originalSnapshot = structuredClone(snapshot);
+    const liveCatalog = { featureName: "Live Catalog Feature", price: 999_000_000 };
+    const getQuotationDetail = vi.fn(async () => snapshot);
+    const response = await createTestApp(quotationService({ getQuotationDetail })).inject({
+      method: "GET", url: "/api/quotations/quotation-a/pdf", headers: headers(),
+    });
+    liveCatalog.featureName = "Changed Catalog Feature";
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="quotation-QT-000001-v1.pdf"');
+    expect(response.rawPayload.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    const pdfText = extractUncompressedPdfText(response.rawPayload);
+    expect(pdfText).toContain("QT-000001");
+    expect(pdfText).toContain("Versi 1");
+    expect(pdfText).toContain("Snapshot Feature");
+    expect(pdfText).toContain("2.574.000");
+    expect(pdfText).not.toContain("Live Catalog Feature");
+    expect(pdfText).not.toContain("Changed Catalog Feature");
+    expect(pdfText).not.toContain("70.000"); // internal hosting cost is not client-facing
+    expect(snapshot).toEqual(originalSnapshot);
+    expect(getQuotationDetail).toHaveBeenCalledExactlyOnceWith("user-a", "quotation-a");
+  });
+
+  it("masks missing and foreign PDF quotations as not found", async () => {
+    const getQuotationDetail = vi.fn(async () => { throw new QuotationDetailNotFoundError(); });
+    const response = await createTestApp(quotationService({ getQuotationDetail })).inject({
+      method: "GET", url: "/api/quotations/foreign-or-missing/pdf", headers: headers(),
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("QUOTATION_NOT_FOUND");
+    expect(getQuotationDetail).toHaveBeenCalledWith("user-a", "foreign-or-missing");
+  });
+
+  it("sanitizes the download name and paginates long snapshot text", async () => {
+    const longQuotation = structuredClone(quotationDetail);
+    longQuotation.header.quotationNumber = 'QT/"unsafe\\name';
+    longQuotation.features = Array.from({ length: 30 }, (_, index) => ({
+      ...quotationDetail.features[0]!,
+      name: `Feature ${index + 1} ${"Long snapshot detail ".repeat(18)}`,
+    }));
+    const response = await createTestApp(quotationService({ getQuotationDetail: async () => longQuotation })).inject({
+      method: "GET", url: "/api/quotations/quotation-a/pdf", headers: headers(),
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="quotation-QT-unsafe-name-v1.pdf"');
+    expect(response.rawPayload.toString("latin1").match(/\/Type \/Page\b/g)?.length).toBeGreaterThan(1);
   });
 });
