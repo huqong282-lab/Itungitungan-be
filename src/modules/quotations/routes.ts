@@ -66,4 +66,10 @@ export const quotationDetailRoutes: FastifyPluginAsyncTypebox<{ service: Quotati
       },
     },
   }, controller.detail);
+  app.get("/:quotationId/pdf", {
+    schema: {
+      params: recalculateQuotationParamsSchema,
+      response: { 401: quotationErrorSchema, 404: quotationErrorSchema },
+    },
+  }, controller.pdf);
 };
