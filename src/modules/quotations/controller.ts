@@ -9,17 +9,32 @@ import {
   DraftQuotationAlreadyExistsError,
   QuotationFinalizedError,
   QuotationDetailNotFoundError,
+  QuotationProjectFilterNotFoundError,
   QuotationNotFoundError,
   QuotationDataInvalidError,
   QuotationProjectNotFoundError,
 } from "./types.js";
+import type { QuotationListQuery } from "./types.js";
 
 type CreateQuotationRequest = FastifyRequest<{ Params: { projectId: string }; Body: Record<string, never> }>;
 type RecalculateQuotationRequest = FastifyRequest<{ Params: { quotationId: string } }>;
 type QuotationDetailRequest = FastifyRequest<{ Params: { quotationId: string } }>;
+type QuotationListRequest = FastifyRequest<{ Querystring: QuotationListQuery }>;
 
 export function createQuotationController(service: QuotationService) {
   return {
+    async list(request: QuotationListRequest, reply: FastifyReply) {
+      if (!request.user) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      try {
+        const result = await service.listQuotations(request.user.id, request.query);
+        return reply.code(200).send({ data: result.data.map((quotation) => ({ ...quotation, createdAt: quotation.createdAt.toISOString() })), meta: result.meta });
+      } catch (error) {
+        if (error instanceof QuotationProjectFilterNotFoundError) {
+          return reply.code(404).send({ error: { code: "PROJECT_NOT_FOUND", message: "Project not found" } });
+        }
+        throw error;
+      }
+    },
     async create(request: CreateQuotationRequest, reply: FastifyReply) {
       if (!request.user) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
       try {

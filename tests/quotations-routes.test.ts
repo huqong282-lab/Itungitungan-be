@@ -4,7 +4,7 @@ import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
 import type { QuotationService } from "../src/modules/quotations/service.js";
-import { DraftQuotationAlreadyExistsError, QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
+import { DraftQuotationAlreadyExistsError, QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectFilterNotFoundError, QuotationProjectNotFoundError } from "../src/modules/quotations/types.js";
 
 const quotation = {
   id: "quotation-a",
@@ -43,10 +43,57 @@ describe("quotation routes", () => {
   }
 
   function quotationService(overrides: Partial<QuotationService> = {}): QuotationService {
-    return { createDraftQuotation: async () => quotation, ...overrides };
+    return {
+      listQuotations: async () => ({ data: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
+      createDraftQuotation: async () => quotation,
+      ...overrides,
+    } as QuotationService;
   }
 
   const headers = () => ({ cookie: `${env.SESSION_COOKIE_NAME}=valid-session` });
+
+  it("lists owned quotation summaries with query filters and documented metadata", async () => {
+    const summary = {
+      id: "quotation-a", quotationNumber: "QT-000001", projectId: "project-a", version: 1, status: "FINAL" as const,
+      clientName: "Client A", projectName: "Website", finalPrice: 7_930_000, createdAt: new Date("2026-10-14T00:00:00.000Z"),
+    };
+    const listQuotations = vi.fn(async () => ({ data: [summary], meta: { page: 2, pageSize: 10, total: 11, totalPages: 2 } }));
+    const response = await createTestApp(quotationService({ listQuotations })).inject({
+      method: "GET", url: "/api/quotations?page=2&pageSize=10&search=Client&status=FINAL&projectId=project-a&sort=finalPrice&order=asc", headers: headers(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ data: [{ ...summary, createdAt: "2026-10-14T00:00:00.000Z" }], meta: { page: 2, pageSize: 10, total: 11, totalPages: 2 } });
+    expect(listQuotations).toHaveBeenCalledWith("user-a", { page: 2, pageSize: 10, search: "Client", status: "FINAL", projectId: "project-a", sort: "finalPrice", order: "asc" });
+  });
+
+  it("requires authentication to list quotations", async () => {
+    const listQuotations = vi.fn(async () => ({ data: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }));
+    const response = await createTestApp(quotationService({ listQuotations }), false).inject({ method: "GET", url: "/api/quotations" });
+    expect(response.statusCode).toBe(401);
+    expect(listQuotations).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid status, sort, order, pagination, and unknown query parameters", async () => {
+    const listQuotations = vi.fn(async () => ({ data: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }));
+    const testApp = createTestApp(quotationService({ listQuotations }));
+    const responses = await Promise.all([
+      testApp.inject({ method: "GET", url: "/api/quotations?status=ACCEPTED", headers: headers() }),
+      testApp.inject({ method: "GET", url: "/api/quotations?sort=project.userId", headers: headers() }),
+      testApp.inject({ method: "GET", url: "/api/quotations?order=sideways", headers: headers() }),
+      testApp.inject({ method: "GET", url: "/api/quotations?page=0", headers: headers() }),
+      testApp.inject({ method: "GET", url: "/api/quotations?pageSize=101", headers: headers() }),
+      testApp.inject({ method: "GET", url: "/api/quotations?unexpected=true", headers: headers() }),
+    ]);
+    expect(responses.map((response) => response.statusCode)).toEqual([400, 400, 400, 400, 400, 400]);
+    expect(listQuotations).not.toHaveBeenCalled();
+  });
+
+  it("returns the documented not found error for a foreign project filter", async () => {
+    const listQuotations = vi.fn(async () => { throw new QuotationProjectFilterNotFoundError(); });
+    const response = await createTestApp(quotationService({ listQuotations })).inject({ method: "GET", url: "/api/quotations?projectId=foreign-project", headers: headers() });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("PROJECT_NOT_FOUND");
+  });
 
   it("creates a DRAFT quotation with the API Contract response", async () => {
     const createDraftQuotation = vi.fn(async () => quotation);

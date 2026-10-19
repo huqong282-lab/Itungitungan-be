@@ -79,6 +79,47 @@ function createRepository(options: { hasDraft?: boolean; failCreate?: boolean; w
 }
 
 describe("quotation repository", () => {
+  it("lists snapshot summaries with ownership in both rows and count and deterministic sorting", async () => {
+    const findMany = vi.fn(async () => [{
+      id: "quotation-a", quotationNumber: "QT-000001", projectId: "project-a", version: 1, status: "FINAL",
+      clientNameSnapshot: "Client", projectNameSnapshot: "Website", finalPrice: 1000, createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    }]);
+    const count = vi.fn(async () => 1);
+    const projectFindFirst = vi.fn(async () => ({ id: "project-a" }));
+    const repository = createQuotationRepository({ quotation: { findMany, count }, project: { findFirst: projectFindFirst } } as unknown as PrismaClient);
+    const query = { page: 2, pageSize: 10, search: "Client", status: "FINAL" as const, projectId: "project-a", sort: "finalPrice" as const, order: "asc" as const };
+
+    await expect(repository.findOwnedProject("project-a", "user-a")).resolves.toEqual({ id: "project-a" });
+    const result = await repository.listByUserId("user-a", query);
+
+    expect(result.total).toBe(1);
+    expect(result.data).toEqual([{ id: "quotation-a", quotationNumber: "QT-000001", projectId: "project-a", version: 1, status: "FINAL", clientName: "Client", projectName: "Website", finalPrice: 1000, createdAt: new Date("2026-01-01T00:00:00.000Z") }]);
+    expect(projectFindFirst).toHaveBeenCalledWith({ where: { id: "project-a", userId: "user-a" }, select: { id: true } });
+    const args = findMany.mock.calls[0]?.[0];
+    expect(args.where).toEqual({
+      project: { userId: "user-a" }, projectId: "project-a", status: "FINAL",
+      OR: [
+        { quotationNumber: { contains: "Client", mode: "insensitive" } },
+        { clientNameSnapshot: { contains: "Client", mode: "insensitive" } },
+        { projectNameSnapshot: { contains: "Client", mode: "insensitive" } },
+      ],
+    });
+    expect(args.orderBy).toEqual([{ finalPrice: "asc" }, { id: "asc" }]);
+    expect(args.skip).toBe(10);
+    expect(args.take).toBe(10);
+    expect(args.select).not.toHaveProperty("project");
+    expect(count).toHaveBeenCalledWith({ where: args.where });
+  });
+
+  it("keeps empty search out of the database filter and sorts by creation time by default at the service layer", async () => {
+    const findMany = vi.fn(async () => []);
+    const count = vi.fn(async () => 0);
+    const repository = createQuotationRepository({ quotation: { findMany, count } } as unknown as PrismaClient);
+    await repository.listByUserId("user-a", { page: 1, pageSize: 20, search: "   ", sort: "createdAt", order: "desc" });
+    expect(findMany.mock.calls[0]?.[0].where).toEqual({ project: { userId: "user-a" } });
+    expect(findMany.mock.calls[0]?.[0].orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]);
+  });
+
   it("queries only saved quotation snapshot fields with ownership through the project", async () => {
     const findFirst = vi.fn(async () => ({ id: "quotation-a", features: [] }));
     const prisma = { quotation: { findFirst } } as unknown as PrismaClient;

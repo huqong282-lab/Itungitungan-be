@@ -1,5 +1,30 @@
 import { Type } from "typebox";
 
+export const quotationListQuerySchema = Type.Object({
+  page: Type.Optional(Type.Integer({ minimum: 1 })),
+  pageSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+  search: Type.Optional(Type.String({ maxLength: 200 })),
+  status: Type.Optional(Type.Union([Type.Literal("DRAFT"), Type.Literal("FINAL")])),
+  projectId: Type.Optional(Type.String({ minLength: 1, pattern: "\\S" })),
+  sort: Type.Optional(Type.Union([Type.Literal("createdAt"), Type.Literal("quotationNumber"), Type.Literal("finalPrice"), Type.Literal("version")])),
+  order: Type.Optional(Type.Union([Type.Literal("asc"), Type.Literal("desc")])),
+}, { additionalProperties: false });
+
+export const quotationListResponseSchema = Type.Object({
+  data: Type.Array(Type.Object({
+    id: Type.String(),
+    quotationNumber: Type.String(),
+    projectId: Type.String(),
+    version: Type.Integer({ minimum: 1 }),
+    status: Type.Union([Type.Literal("DRAFT"), Type.Literal("FINAL")]),
+    clientName: Type.String(),
+    projectName: Type.String(),
+    finalPrice: Type.Integer({ minimum: 0 }),
+    createdAt: Type.String({ format: "date-time" }),
+  })),
+  meta: Type.Object({ page: Type.Integer(), pageSize: Type.Integer(), total: Type.Integer(), totalPages: Type.Integer() }),
+});
+
 export const createQuotationParamsSchema = Type.Object({
   projectId: Type.String({ minLength: 1, pattern: "\\S" }),
 }, { additionalProperties: false });

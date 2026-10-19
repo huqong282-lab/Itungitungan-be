@@ -1,10 +1,23 @@
 import type { CalculationService } from "../calculations/service.js";
 import type { QuotationRepositoryPort } from "./repository.js";
-import type { QuotationDetail } from "./types.js";
-import { QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectNotFoundError } from "./types.js";
+import type { QuotationDetail, QuotationListQuery, QuotationListResult } from "./types.js";
+import { QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectFilterNotFoundError, QuotationProjectNotFoundError } from "./types.js";
 
 export function createQuotationService(repository: QuotationRepositoryPort, calculationService: CalculationService) {
   return {
+    async listQuotations(userId: string, query: QuotationListQuery): Promise<QuotationListResult> {
+      const page = query.page ?? 1;
+      const pageSize = query.pageSize ?? 20;
+      if (query.projectId && !await repository.findOwnedProject(query.projectId, userId)) {
+        throw new QuotationProjectFilterNotFoundError();
+      }
+      const resolved = { ...query, page, pageSize, sort: query.sort ?? "createdAt", order: query.order ?? "desc" };
+      const { data, total } = await repository.listByUserId(userId, resolved);
+      return {
+        data,
+        meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      };
+    },
     async createDraftQuotation(userId: string, projectId: string) {
       const calculation = await calculationService.calculateProjectSnapshot(userId, projectId, {});
       const quotation = await repository.createDraftQuotation(projectId, userId, calculation);

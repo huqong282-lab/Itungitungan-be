@@ -178,6 +178,7 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
   app.register(quotationRoutes, {
     prefix: "/api/projects",
     service: quotationService ?? {
+      listQuotations: async () => { throw new Error("Quotation service is not configured"); },
       createDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       recalculateDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       getQuotationDetail: async () => { throw new Error("Quotation service is not configured"); },
@@ -186,6 +187,7 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
   app.register(quotationRecalculationRoutes, {
     prefix: "/api/quotations",
     service: quotationService ?? {
+      listQuotations: async () => { throw new Error("Quotation service is not configured"); },
       createDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       recalculateDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       getQuotationDetail: async () => { throw new Error("Quotation service is not configured"); },
@@ -194,6 +196,7 @@ export function buildApp(authService?: AuthService, sessionLookup?: SessionLooku
   app.register(quotationDetailRoutes, {
     prefix: "/api/quotations",
     service: quotationService ?? {
+      listQuotations: async () => { throw new Error("Quotation service is not configured"); },
       createDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       recalculateDraftQuotation: async () => { throw new Error("Quotation service is not configured"); },
       getQuotationDetail: async () => { throw new Error("Quotation service is not configured"); },
