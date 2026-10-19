@@ -20,6 +20,7 @@ type CreateQuotationRequest = FastifyRequest<{ Params: { projectId: string }; Bo
 type RecalculateQuotationRequest = FastifyRequest<{ Params: { quotationId: string } }>;
 type QuotationDetailRequest = FastifyRequest<{ Params: { quotationId: string } }>;
 type QuotationListRequest = FastifyRequest<{ Querystring: QuotationListQuery }>;
+type FinalizeQuotationRequest = FastifyRequest<{ Params: { quotationId: string } }>;
 
 export function createQuotationController(service: QuotationService) {
   return {
@@ -31,6 +32,27 @@ export function createQuotationController(service: QuotationService) {
       } catch (error) {
         if (error instanceof QuotationProjectFilterNotFoundError) {
           return reply.code(404).send({ error: { code: "PROJECT_NOT_FOUND", message: "Project not found" } });
+        }
+        throw error;
+      }
+    },
+    async finalize(request: FinalizeQuotationRequest, reply: FastifyReply) {
+      if (!request.user) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      try {
+        const quotation = await service.finalizeQuotation(request.user.id, request.params.quotationId);
+        return reply.code(200).send({ data: {
+          id: quotation.id,
+          quotationNumber: quotation.quotationNumber,
+          version: quotation.version,
+          status: quotation.status,
+          finalizedAt: quotation.finalizedAt.toISOString(),
+        } });
+      } catch (error) {
+        if (error instanceof QuotationNotFoundError) {
+          return reply.code(404).send({ error: { code: "QUOTATION_NOT_FOUND", message: "Quotation not found" } });
+        }
+        if (error instanceof QuotationFinalizedError) {
+          return reply.code(422).send({ error: { code: "QUOTATION_FINALIZED", message: "Final quotations cannot be modified." } });
         }
         throw error;
       }

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "../src/generated/prisma/client.js";
 import { createQuotationRepository } from "../src/modules/quotations/repository.js";
 import type { CreateDraftQuotationInput, CreatedQuotation } from "../src/modules/quotations/types.js";
-import { DraftQuotationAlreadyExistsError } from "../src/modules/quotations/types.js";
+import { DraftQuotationAlreadyExistsError, QuotationFinalizedError } from "../src/modules/quotations/types.js";
 
 const input: CreateDraftQuotationInput = {
   calculation: {
@@ -79,6 +79,67 @@ function createRepository(options: { hasDraft?: boolean; failCreate?: boolean; w
 }
 
 describe("quotation repository", () => {
+  it("conditionally finalizes only an owned DRAFT and changes no snapshot fields", async () => {
+    const updateManyAndReturn = vi.fn(async () => [{ id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "FINAL", finalizedAt: new Date("2026-10-19T00:00:00.000Z") }]);
+    const findFirst = vi.fn(async () => null);
+    const repository = createQuotationRepository({ quotation: { updateManyAndReturn, findFirst } } as unknown as PrismaClient);
+
+    await expect(repository.finalizeDraftQuotation("quotation-a", "user-a")).resolves.toEqual({
+      id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "FINAL", finalizedAt: expect.any(Date),
+    });
+    expect(updateManyAndReturn).toHaveBeenCalledWith({
+      where: { id: "quotation-a", status: "DRAFT", project: { userId: "user-a" } },
+      data: { status: "FINAL", finalizedAt: expect.any(Date) },
+      select: { id: true, quotationNumber: true, version: true, status: true, finalizedAt: true },
+    });
+    const updateData = updateManyAndReturn.mock.calls[0]?.[0].data;
+    expect(Object.keys(updateData).sort()).toEqual(["finalizedAt", "status"]);
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it("masks foreign and missing quotations as not found", async () => {
+    const updateManyAndReturn = vi.fn(async () => []);
+    const findFirst = vi.fn(async () => null);
+    const repository = createQuotationRepository({ quotation: { updateManyAndReturn, findFirst } } as unknown as PrismaClient);
+
+    await expect(repository.finalizeDraftQuotation("foreign-or-missing", "user-a")).resolves.toBeNull();
+    expect(findFirst).toHaveBeenCalledWith({ where: { id: "foreign-or-missing", project: { userId: "user-a" } }, select: { status: true } });
+  });
+
+  it("rejects an already FINAL quotation without issuing another write", async () => {
+    const updateManyAndReturn = vi.fn(async () => []);
+    const findFirst = vi.fn(async () => ({ status: "FINAL" }));
+    const repository = createQuotationRepository({ quotation: { updateManyAndReturn, findFirst } } as unknown as PrismaClient);
+
+    await expect(repository.finalizeDraftQuotation("quotation-a", "user-a")).rejects.toBeInstanceOf(QuotationFinalizedError);
+    expect(updateManyAndReturn).toHaveBeenCalledOnce();
+    expect(findFirst).toHaveBeenCalledOnce();
+  });
+
+  it("persists a single finalization under concurrent requests and rejects the competing request", async () => {
+    const persisted = {
+      id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "DRAFT" as "DRAFT" | "FINAL",
+      finalizedAt: null as Date | null, finalPrice: 7_930_000, clientNameSnapshot: "Client A", projectNameSnapshot: "Website",
+    };
+    const updateManyAndReturn = vi.fn(async (args: { data: { status: "FINAL"; finalizedAt: Date } }) => {
+      if (persisted.status !== "DRAFT") return [];
+      persisted.status = args.data.status;
+      persisted.finalizedAt = args.data.finalizedAt;
+      return [{ id: persisted.id, quotationNumber: persisted.quotationNumber, version: persisted.version, status: persisted.status, finalizedAt: persisted.finalizedAt }];
+    });
+    const findFirst = vi.fn(async () => ({ status: persisted.status }));
+    const repository = createQuotationRepository({ quotation: { updateManyAndReturn, findFirst } } as unknown as PrismaClient);
+
+    const results = await Promise.allSettled([
+      repository.finalizeDraftQuotation("quotation-a", "user-a"),
+      repository.finalizeDraftQuotation("quotation-a", "user-a"),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(persisted).toMatchObject({ status: "FINAL", finalPrice: 7_930_000, clientNameSnapshot: "Client A", projectNameSnapshot: "Website" });
+    expect(persisted.finalizedAt).toBeInstanceOf(Date);
+  });
+
   it("lists snapshot summaries with ownership in both rows and count and deterministic sorting", async () => {
     const findMany = vi.fn(async () => [{
       id: "quotation-a", quotationNumber: "QT-000001", projectId: "project-a", version: 1, status: "FINAL",

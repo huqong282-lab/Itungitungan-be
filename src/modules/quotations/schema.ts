@@ -120,6 +120,16 @@ export const recalculateQuotationParamsSchema = Type.Object({
   quotationId: Type.String({ minLength: 1, pattern: "\\S" }),
 }, { additionalProperties: false });
 
+export const quotationFinalizeResponseSchema = Type.Object({
+  data: Type.Object({
+    id: Type.String(),
+    quotationNumber: Type.String(),
+    version: Type.Integer({ minimum: 1 }),
+    status: Type.Literal("FINAL"),
+    finalizedAt: Type.String({ format: "date-time" }),
+  }),
+});
+
 export const quotationErrorSchema = Type.Object({
   error: Type.Object({ code: Type.String(), message: Type.String() }),
 });
