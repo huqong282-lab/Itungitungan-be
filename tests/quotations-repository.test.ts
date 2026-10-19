@@ -230,6 +230,119 @@ describe("quotation repository", () => {
     }));
   });
 
+  it("creates the next version from current project data while preserving the FINAL version", async () => {
+    const previousFinal = {
+      id: "quotation-v2",
+      projectId: "project-a",
+      quotationNumber: "QT-000004",
+      version: 2,
+      status: "FINAL",
+      clientNameSnapshot: "Previous Client",
+      projectNameSnapshot: "Previous Website",
+      finalPrice: 6_500_000,
+      finalizedAt: new Date("2026-10-10T00:00:00.000Z"),
+      snapshot: { featureNameSnapshot: "Old Feature", priceSnapshot: 600_000 },
+    };
+    const originalFinal = structuredClone(previousFinal);
+    const stored = [previousFinal];
+    const transaction = {
+      $queryRaw: vi.fn(async () => []),
+      project: { findFirst: vi.fn(async () => ({ id: "project-a" })) },
+      quotation: {
+        findFirst: vi.fn(async () => null),
+        findMany: vi.fn(async (args: { where?: { projectId?: string } }) => args.where?.projectId
+          ? stored.map(({ version }) => ({ version }))
+          : stored.map(({ quotationNumber }) => ({ quotationNumber }))),
+        create: vi.fn(async (args: { data: { projectId: string; quotationNumber: string; version: number; status: string; clientNameSnapshot: string; projectNameSnapshot: string } }) => {
+          const next = { ...result, id: "quotation-v3", projectId: args.data.projectId, quotationNumber: args.data.quotationNumber, version: args.data.version, status: "DRAFT" as const };
+          stored.push({
+            id: next.id,
+            projectId: args.data.projectId,
+            quotationNumber: args.data.quotationNumber,
+            version: args.data.version,
+            status: args.data.status,
+            clientNameSnapshot: args.data.clientNameSnapshot,
+            projectNameSnapshot: args.data.projectNameSnapshot,
+            finalPrice: next.finalPrice,
+            finalizedAt: null,
+            snapshot: { featureNameSnapshot: "Current Feature", priceSnapshot: 1_000_000 },
+          });
+          return next;
+        }),
+        update: vi.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (tx: typeof transaction) => Promise<CreatedQuotation | null>) => callback(transaction)),
+    } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+
+    const nextVersion = await repository.createDraftQuotation("project-a", "user-a", input);
+
+    expect(nextVersion).toMatchObject({ id: "quotation-v3", quotationNumber: "QT-000005", version: 3, status: "DRAFT" });
+    expect(nextVersion?.id).not.toBe(previousFinal.id);
+    expect(stored[0]).toEqual(originalFinal);
+    expect(stored[1]).toMatchObject({ id: "quotation-v3", version: 3, status: "DRAFT", clientNameSnapshot: "Client A", projectNameSnapshot: "Website" });
+    expect(transaction.quotation.update).not.toHaveBeenCalled();
+  });
+
+  it("serializes concurrent version creation so only one DRAFT version is created", async () => {
+    let lockQueue = Promise.resolve();
+    let hasDraft = false;
+    const stored = [{ id: "quotation-v1", projectId: "project-a", quotationNumber: "QT-000001", version: 1, status: "FINAL" }];
+    const makeTransaction = () => {
+      let releaseLock: (() => void) | undefined;
+      return {
+        $queryRaw: vi.fn(async () => {
+          let release!: () => void;
+          const previousLock = lockQueue;
+          lockQueue = new Promise<void>((resolve) => { release = resolve; });
+          await previousLock;
+          releaseLock = release;
+          return [];
+        }),
+        project: { findFirst: vi.fn(async () => ({ id: "project-a" })) },
+        quotation: {
+          findFirst: vi.fn(async () => hasDraft ? ({ id: "quotation-v2" }) : null),
+          findMany: vi.fn(async (args: { where?: { projectId?: string } }) => args.where?.projectId
+            ? stored.map(({ version }) => ({ version }))
+            : stored.map(({ quotationNumber }) => ({ quotationNumber }))),
+          create: vi.fn(async (args: { data: { projectId: string; quotationNumber: string; version: number } }) => {
+            hasDraft = true;
+            const createdVersion = { id: "quotation-v2", ...args.data, status: "DRAFT" };
+            stored.push(createdVersion);
+            return { ...result, ...createdVersion };
+          }),
+        },
+        release() { releaseLock?.(); },
+      };
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (tx: ReturnType<typeof makeTransaction>) => Promise<CreatedQuotation | null>) => {
+        const transaction = makeTransaction();
+        try {
+          return await callback(transaction);
+        } finally {
+          transaction.release();
+        }
+      }),
+    } as unknown as PrismaClient;
+    const repository = createQuotationRepository(prisma);
+
+    const attempts = await Promise.allSettled([
+      repository.createDraftQuotation("project-a", "user-a", input),
+      repository.createDraftQuotation("project-a", "user-a", input),
+    ]);
+
+    expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
+    const rejection = attempts.find((attempt) => attempt.status === "rejected");
+    expect(rejection?.status).toBe("rejected");
+    if (rejection?.status === "rejected") expect(rejection.reason).toBeInstanceOf(DraftQuotationAlreadyExistsError);
+    expect(stored).toHaveLength(2);
+    expect(stored.map(({ version }) => version)).toEqual([1, 2]);
+    expect(stored.map(({ quotationNumber }) => quotationNumber)).toEqual(["QT-000001", "QT-000002"]);
+  });
+
   it("rejects creation when a DRAFT already exists", async () => {
     const { repository, transaction } = createRepository({ hasDraft: true });
 
