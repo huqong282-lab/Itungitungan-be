@@ -50,6 +50,28 @@ const created: CreatedQuotation = {
 };
 
 describe("quotation service", () => {
+  it("finalizes the owned draft without recalculating", async () => {
+    const finalized = { id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "FINAL" as const, finalizedAt: new Date("2026-10-19T00:00:00.000Z") };
+    const finalizeDraftQuotation = vi.fn(async () => finalized);
+    const calculateProjectSnapshot = vi.fn();
+    const service = createQuotationService(
+      { finalizeDraftQuotation } as unknown as QuotationRepositoryPort,
+      { calculateProjectSnapshot } as unknown as CalculationService,
+    );
+
+    await expect(service.finalizeQuotation("user-a", "quotation-a")).resolves.toBe(finalized);
+    expect(finalizeDraftQuotation).toHaveBeenCalledWith("quotation-a", "user-a");
+    expect(calculateProjectSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("maps a missing or foreign quotation to not found", async () => {
+    const service = createQuotationService(
+      { finalizeDraftQuotation: async () => null } as unknown as QuotationRepositoryPort,
+      { calculateProjectSnapshot: vi.fn() } as unknown as CalculationService,
+    );
+    await expect(service.finalizeQuotation("user-a", "foreign-or-missing")).rejects.toThrow("Quotation not found");
+  });
+
   it("applies pagination defaults and computes metadata for the filtered owned history", async () => {
     const listByUserId = vi.fn(async () => ({ data: [], total: 41 }));
     const findOwnedProject = vi.fn(async () => ({ id: "project-a" }));

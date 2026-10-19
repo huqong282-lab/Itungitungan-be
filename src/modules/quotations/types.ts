@@ -46,6 +46,14 @@ export type CreatedQuotation = {
   createdAt: Date;
 };
 
+export type FinalizedQuotation = {
+  id: string;
+  quotationNumber: string;
+  version: number;
+  status: "FINAL";
+  finalizedAt: Date;
+};
+
 export type QuotationDetail = {
   header: {
     id: string;

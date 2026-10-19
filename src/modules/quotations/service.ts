@@ -1,6 +1,6 @@
 import type { CalculationService } from "../calculations/service.js";
 import type { QuotationRepositoryPort } from "./repository.js";
-import type { QuotationDetail, QuotationListQuery, QuotationListResult } from "./types.js";
+import type { FinalizedQuotation, QuotationDetail, QuotationListQuery, QuotationListResult } from "./types.js";
 import { QuotationDetailNotFoundError, QuotationFinalizedError, QuotationNotFoundError, QuotationProjectFilterNotFoundError, QuotationProjectNotFoundError } from "./types.js";
 
 export function createQuotationService(repository: QuotationRepositoryPort, calculationService: CalculationService) {
@@ -17,6 +17,11 @@ export function createQuotationService(repository: QuotationRepositoryPort, calc
         data,
         meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
       };
+    },
+    async finalizeQuotation(userId: string, quotationId: string): Promise<FinalizedQuotation> {
+      const quotation = await repository.finalizeDraftQuotation(quotationId, userId);
+      if (!quotation) throw new QuotationNotFoundError();
+      return quotation;
     },
     async createDraftQuotation(userId: string, projectId: string) {
       const calculation = await calculationService.calculateProjectSnapshot(userId, projectId, {});

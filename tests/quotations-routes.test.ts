@@ -45,12 +45,60 @@ describe("quotation routes", () => {
   function quotationService(overrides: Partial<QuotationService> = {}): QuotationService {
     return {
       listQuotations: async () => ({ data: [], meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } }),
+      finalizeQuotation: async () => ({ id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "FINAL", finalizedAt: new Date("2026-10-14T00:00:00.000Z") }),
       createDraftQuotation: async () => quotation,
       ...overrides,
     } as QuotationService;
   }
 
   const headers = () => ({ cookie: `${env.SESSION_COOKIE_NAME}=valid-session` });
+
+  it("finalizes a DRAFT quotation and returns the documented response", async () => {
+    const finalized = { id: "quotation-a", quotationNumber: "QT-000001", version: 1, status: "FINAL" as const, finalizedAt: new Date("2026-10-19T00:00:00.000Z") };
+    const finalizeQuotation = vi.fn(async () => finalized);
+    const response = await createTestApp(quotationService({ finalizeQuotation })).inject({
+      method: "POST", url: "/api/quotations/quotation-a/finalize", headers: headers(),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ data: { ...finalized, finalizedAt: "2026-10-19T00:00:00.000Z" } });
+    expect(finalizeQuotation).toHaveBeenCalledWith("user-a", "quotation-a");
+  });
+
+  it("rejects finalizing an already FINAL quotation", async () => {
+    const finalizeQuotation = vi.fn(async () => { throw new QuotationFinalizedError(); });
+    const response = await createTestApp(quotationService({ finalizeQuotation })).inject({
+      method: "POST", url: "/api/quotations/quotation-a/finalize", headers: headers(),
+    });
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toEqual({ error: { code: "QUOTATION_FINALIZED", message: "Final quotations cannot be modified." } });
+  });
+
+  it("rejects unauthenticated finalization without calling the service", async () => {
+    const finalizeQuotation = vi.fn(async () => quotationService().finalizeQuotation("user-a", "quotation-a"));
+    const response = await createTestApp(quotationService({ finalizeQuotation }), false).inject({
+      method: "POST", url: "/api/quotations/quotation-a/finalize",
+    });
+    expect(response.statusCode).toBe(401);
+    expect(finalizeQuotation).not.toHaveBeenCalled();
+  });
+
+  it("masks foreign and missing quotations as not found", async () => {
+    const finalizeQuotation = vi.fn(async () => { throw new QuotationNotFoundError(); });
+    const response = await createTestApp(quotationService({ finalizeQuotation })).inject({
+      method: "POST", url: "/api/quotations/foreign-or-missing/finalize", headers: headers(),
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: { code: "QUOTATION_NOT_FOUND", message: "Quotation not found" } });
+  });
+
+  it("rejects an empty quotation identifier using the standard parameter validation", async () => {
+    const finalizeQuotation = vi.fn(async () => quotationService().finalizeQuotation("user-a", " "));
+    const response = await createTestApp(quotationService({ finalizeQuotation })).inject({
+      method: "POST", url: "/api/quotations/%20/finalize", headers: headers(),
+    });
+    expect(response.statusCode).toBe(400);
+    expect(finalizeQuotation).not.toHaveBeenCalled();
+  });
 
   it("lists owned quotation summaries with query filters and documented metadata", async () => {
     const summary = {

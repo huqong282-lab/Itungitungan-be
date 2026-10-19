@@ -1,5 +1,5 @@
 import { Prisma, QuotationStatus, type PrismaClient } from "../../generated/prisma/client.js";
-import type { CreateDraftQuotationInput, CreatedQuotation } from "./types.js";
+import type { CreateDraftQuotationInput, CreatedQuotation, FinalizedQuotation } from "./types.js";
 import type { ResolvedQuotationListQuery } from "./types.js";
 import { DraftQuotationAlreadyExistsError, QuotationDataInvalidError, QuotationFinalizedError } from "./types.js";
 
@@ -29,6 +29,24 @@ export function createQuotationRepository(prisma: PrismaClient) {
   return {
     async findOwnedProject(projectId: string, userId: string) {
       return prisma.project.findFirst({ where: { id: projectId, userId }, select: { id: true } });
+    },
+    async finalizeDraftQuotation(quotationId: string, userId: string): Promise<FinalizedQuotation | null> {
+      const finalizedAt = new Date();
+      const updated = await prisma.quotation.updateManyAndReturn({
+        where: { id: quotationId, status: QuotationStatus.DRAFT, project: { userId } },
+        data: { status: QuotationStatus.FINAL, finalizedAt },
+        select: { id: true, quotationNumber: true, version: true, status: true, finalizedAt: true },
+      });
+      const quotation = updated[0];
+      if (quotation) return { ...quotation, status: "FINAL", finalizedAt };
+
+      const existing = await prisma.quotation.findFirst({
+        where: { id: quotationId, project: { userId } },
+        select: { status: true },
+      });
+      if (!existing) return null;
+      if (existing.status === QuotationStatus.FINAL) throw new QuotationFinalizedError();
+      return null;
     },
     async listByUserId(userId: string, query: ResolvedQuotationListQuery) {
       const where: Prisma.QuotationWhereInput = {
@@ -237,7 +255,7 @@ function isRetryableWriteConflict(error: unknown): boolean {
 }
 
 export type QuotationRepository = ReturnType<typeof createQuotationRepository>;
-export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation" | "findQuotationDetail" | "findOwnedProject" | "listByUserId">;
+export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation" | "findQuotationDetail" | "findOwnedProject" | "listByUserId" | "finalizeDraftQuotation">;
 
 function snapshotData(input: CreateDraftQuotationInput) {
   const { calculation, snapshot } = input;
