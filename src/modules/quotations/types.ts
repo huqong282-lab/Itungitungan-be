@@ -2,6 +2,40 @@ import type { ProjectCalculationSnapshot } from "../calculations/service.js";
 
 export type CreateDraftQuotationInput = ProjectCalculationSnapshot;
 
+export type QuotationListQuery = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: "DRAFT" | "FINAL";
+  projectId?: string;
+  sort?: "createdAt" | "quotationNumber" | "finalPrice" | "version";
+  order?: "asc" | "desc";
+};
+export type ResolvedQuotationListQuery = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  status?: "DRAFT" | "FINAL";
+  projectId?: string;
+  sort: NonNullable<QuotationListQuery["sort"]>;
+  order: NonNullable<QuotationListQuery["order"]>;
+};
+export type QuotationSummary = {
+  id: string;
+  quotationNumber: string;
+  projectId: string;
+  version: number;
+  status: "DRAFT" | "FINAL";
+  clientName: string;
+  projectName: string;
+  finalPrice: number;
+  createdAt: Date;
+};
+export type QuotationListResult = {
+  data: QuotationSummary[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+};
+
 export type CreatedQuotation = {
   id: string;
   quotationNumber: string;
@@ -107,5 +141,12 @@ export class QuotationDetailNotFoundError extends Error {
   constructor() {
     super("Quotation not found");
     this.name = "QuotationDetailNotFoundError";
+  }
+}
+
+export class QuotationProjectFilterNotFoundError extends Error {
+  constructor() {
+    super("Project not found");
+    this.name = "QuotationProjectFilterNotFoundError";
   }
 }

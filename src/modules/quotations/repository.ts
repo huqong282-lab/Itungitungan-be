@@ -1,5 +1,6 @@
 import { Prisma, QuotationStatus, type PrismaClient } from "../../generated/prisma/client.js";
 import type { CreateDraftQuotationInput, CreatedQuotation } from "./types.js";
+import type { ResolvedQuotationListQuery } from "./types.js";
 import { DraftQuotationAlreadyExistsError, QuotationDataInvalidError, QuotationFinalizedError } from "./types.js";
 
 const QUOTATION_NUMBER_LOCK_ID = 781_234_567;
@@ -12,9 +13,59 @@ const quotationResponseSelect = {
   workingDays: true,
   createdAt: true,
 } as const;
+const quotationSummarySelect = {
+  id: true,
+  quotationNumber: true,
+  projectId: true,
+  version: true,
+  status: true,
+  clientNameSnapshot: true,
+  projectNameSnapshot: true,
+  finalPrice: true,
+  createdAt: true,
+} as const;
 
 export function createQuotationRepository(prisma: PrismaClient) {
   return {
+    async findOwnedProject(projectId: string, userId: string) {
+      return prisma.project.findFirst({ where: { id: projectId, userId }, select: { id: true } });
+    },
+    async listByUserId(userId: string, query: ResolvedQuotationListQuery) {
+      const where: Prisma.QuotationWhereInput = {
+        project: { userId },
+        ...(query.projectId && { projectId: query.projectId }),
+        ...(query.status && { status: query.status }),
+        ...(query.search?.trim() && { OR: [
+          { quotationNumber: { contains: query.search.trim(), mode: "insensitive" } },
+          { clientNameSnapshot: { contains: query.search.trim(), mode: "insensitive" } },
+          { projectNameSnapshot: { contains: query.search.trim(), mode: "insensitive" } },
+        ] }),
+      };
+      const [quotations, total] = await Promise.all([
+        prisma.quotation.findMany({
+          where,
+          select: quotationSummarySelect,
+          orderBy: [{ [query.sort]: query.order }, { id: query.order }],
+          skip: (query.page - 1) * query.pageSize,
+          take: query.pageSize,
+        }),
+        prisma.quotation.count({ where }),
+      ]);
+      return {
+        data: quotations.map((quotation) => ({
+          id: quotation.id,
+          quotationNumber: quotation.quotationNumber,
+          projectId: quotation.projectId,
+          version: quotation.version,
+          status: quotation.status,
+          clientName: quotation.clientNameSnapshot,
+          projectName: quotation.projectNameSnapshot,
+          finalPrice: quotation.finalPrice,
+          createdAt: quotation.createdAt,
+        })),
+        total,
+      };
+    },
     async findQuotationDetail(quotationId: string, userId: string) {
       return prisma.quotation.findFirst({
         where: { id: quotationId, project: { userId } },
@@ -186,7 +237,7 @@ function isRetryableWriteConflict(error: unknown): boolean {
 }
 
 export type QuotationRepository = ReturnType<typeof createQuotationRepository>;
-export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation" | "findQuotationDetail">;
+export type QuotationRepositoryPort = Pick<QuotationRepository, "createDraftQuotation" | "findQuotationForRecalculation" | "recalculateDraftQuotation" | "findQuotationDetail" | "findOwnedProject" | "listByUserId">;
 
 function snapshotData(input: CreateDraftQuotationInput) {
   const { calculation, snapshot } = input;

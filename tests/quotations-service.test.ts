@@ -3,6 +3,7 @@ import { createQuotationService } from "../src/modules/quotations/service.js";
 import type { QuotationRepositoryPort } from "../src/modules/quotations/repository.js";
 import type { CalculationService } from "../src/modules/calculations/service.js";
 import type { CreatedQuotation } from "../src/modules/quotations/types.js";
+import { QuotationProjectFilterNotFoundError } from "../src/modules/quotations/types.js";
 
 const calculation = {
   estimatedHours: 44,
@@ -49,6 +50,30 @@ const created: CreatedQuotation = {
 };
 
 describe("quotation service", () => {
+  it("applies pagination defaults and computes metadata for the filtered owned history", async () => {
+    const listByUserId = vi.fn(async () => ({ data: [], total: 41 }));
+    const findOwnedProject = vi.fn(async () => ({ id: "project-a" }));
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findOwnedProject, listByUserId } as QuotationRepositoryPort,
+      { calculateProjectSnapshot: vi.fn() } as unknown as CalculationService,
+    );
+    await expect(service.listQuotations("user-a", { projectId: "project-a" })).resolves.toEqual({
+      data: [], meta: { page: 1, pageSize: 20, total: 41, totalPages: 3 },
+    });
+    expect(findOwnedProject).toHaveBeenCalledWith("project-a", "user-a");
+    expect(listByUserId).toHaveBeenCalledWith("user-a", { projectId: "project-a", page: 1, pageSize: 20, sort: "createdAt", order: "desc" });
+  });
+
+  it("does not query history for a project owned by another user", async () => {
+    const listByUserId = vi.fn(async () => ({ data: [], total: 0 }));
+    const service = createQuotationService(
+      { createDraftQuotation: async () => created, findOwnedProject: async () => null, listByUserId } as QuotationRepositoryPort,
+      { calculateProjectSnapshot: vi.fn() } as unknown as CalculationService,
+    );
+    await expect(service.listQuotations("user-a", { projectId: "foreign-project" })).rejects.toBeInstanceOf(QuotationProjectFilterNotFoundError);
+    expect(listByUserId).not.toHaveBeenCalled();
+  });
+
   it("calculates from BE-037 and persists the resulting snapshot", async () => {
     const calculateProjectSnapshot = vi.fn(async () => ({ calculation, snapshot }));
     const createDraftQuotation = vi.fn(async () => created);
