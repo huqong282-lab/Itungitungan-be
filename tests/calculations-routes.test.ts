@@ -115,4 +115,24 @@ describe("calculation routes", () => {
 
     expect([invalidId.statusCode, untrustedValues.statusCode, invalidMargin.statusCode]).toEqual([400, 400, 400]);
   });
+
+  it("validates the optional body at the route boundary and rejects explicit null", async () => {
+    const calculateProject = vi.fn(async () => result);
+    const testApp = createTestApp(calculationService({ calculateProject }));
+    const noBody = await testApp.inject({
+      method: "POST", url: "/api/projects/project-a/calculate", headers: headers(),
+    });
+    const explicitNull = await testApp.inject({
+      method: "POST", url: "/api/projects/project-a/calculate",
+      headers: { ...headers(), "content-type": "application/json" }, payload: "null",
+    });
+    const wrongType = await testApp.inject({
+      method: "POST", url: "/api/projects/project-a/calculate", headers: headers(), payload: { marginPercentage: "25" },
+    });
+
+    expect(noBody.statusCode).toBe(200);
+    expect(explicitNull.statusCode).toBe(400);
+    expect(wrongType.statusCode).toBe(400);
+    expect(calculateProject).toHaveBeenCalledExactlyOnceWith("user-a", "project-a", {});
+  });
 });
