@@ -26,6 +26,40 @@ describe("calculatePricing", () => {
     })).toEqual({ subtotal: 5_000_000, marginAmount: 1_500_000, rushFeeAmount: 1_950_000, finalPrice: 8_450_000 });
   });
 
+  it("accepts zero and maximum percentages with positive cost components", () => {
+    expect(calculatePricing({
+      developmentCost: 100,
+      designCost: 50,
+      hostingCost: 25,
+      maintenanceCost: 25,
+      marginPercentage: 0,
+      rushFeePercentage: 0,
+      isRush: false,
+    })).toEqual({ subtotal: 200, marginAmount: 0, rushFeeAmount: 0, finalPrice: 200 });
+
+    expect(calculatePricing({
+      developmentCost: 100,
+      designCost: 50,
+      hostingCost: 25,
+      maintenanceCost: 25,
+      marginPercentage: 100,
+      rushFeePercentage: 100,
+      isRush: true,
+    })).toEqual({ subtotal: 200, marginAmount: 200, rushFeeAmount: 400, finalPrice: 800 });
+  });
+
+  it("does not apply a configured rush fee to a non-rush project with a positive subtotal", () => {
+    expect(calculatePricing({
+      developmentCost: 500,
+      designCost: 200,
+      hostingCost: 100,
+      maintenanceCost: 200,
+      marginPercentage: 0,
+      rushFeePercentage: 100,
+      isRush: false,
+    })).toEqual({ subtotal: 1_000, marginAmount: 0, rushFeeAmount: 0, finalPrice: 1_000 });
+  });
+
   it("rounds fractional margin and rush fee amounts up", () => {
     expect(calculatePricing({
       developmentCost: 1,
@@ -78,5 +112,29 @@ describe("calculatePricing", () => {
       rushFeePercentage: 0,
       isRush: false,
     })).toThrow("INVALID_SUBTOTAL");
+  });
+
+  it("accepts the maximum final Prisma Int amount when no markup is applied", () => {
+    expect(calculatePricing({
+      developmentCost: MAX_PRICE_AMOUNT,
+      designCost: 0,
+      hostingCost: 0,
+      maintenanceCost: 0,
+      marginPercentage: 0,
+      rushFeePercentage: 100,
+      isRush: false,
+    })).toEqual({ subtotal: MAX_PRICE_AMOUNT, marginAmount: 0, rushFeeAmount: 0, finalPrice: MAX_PRICE_AMOUNT });
+  });
+
+  it("rejects a final price that crosses the Prisma Int limit after margin", () => {
+    expect(() => calculatePricing({
+      developmentCost: 1_073_741_824,
+      designCost: 0,
+      hostingCost: 0,
+      maintenanceCost: 0,
+      marginPercentage: 100,
+      rushFeePercentage: 0,
+      isRush: false,
+    })).toThrow("INVALID_FINALPRICE");
   });
 });
