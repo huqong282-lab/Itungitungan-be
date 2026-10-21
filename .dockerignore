@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+dist
+src/generated
+coverage
+tests
+Itungitungan-Documentation
+docker
+npm-debug.log*
