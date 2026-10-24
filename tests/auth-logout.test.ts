@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import { hashSessionToken } from "../src/modules/auth/session-token.js";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
@@ -17,7 +17,7 @@ describe("POST /api/auth/logout", () => {
 
   it("invalidates the session, clears the cookie, and rejects the old cookie", async () => {
     const token = "session-to-revoke";
-    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const tokenHash = hashSessionToken(token);
     const sessions = new Map([[tokenHash, {
       expiresAt: new Date(Date.now() + 60_000),
       user: { id: "user-1", name: "Hanz", email: "hanz@example.com" },
