@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
+import { env } from "../src/config/env.js";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app/app.js";
-import { env } from "../src/config/env.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
 import { createProjectService } from "../src/modules/projects/service.js";
 import type { Project } from "../src/modules/projects/types.js";
@@ -94,7 +94,7 @@ describe("ownership isolation across authenticated users", () => {
 });
 
 function hash(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+  return createHmac("sha256", env.SESSION_SECRET).update(token).digest("hex");
 }
 
 function withoutOwner(project: Project & { userId: string }): Project {

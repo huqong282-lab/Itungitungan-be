@@ -882,6 +882,7 @@ DATABASE_URL
 SESSION_SECRET
 CORS_ORIGINS
 PORT
+NODE_ENV
 ```
 
 Development menggunakan `.env`.
@@ -893,6 +894,38 @@ Repository hanya menyimpan:
 ```
 
 Secret asli tidak masuk Git.
+
+### Backend runtime configuration
+
+`DATABASE_URL` is required and must use the PostgreSQL URL scheme. When the API runs directly on the host, use the host-reachable database address (commonly `localhost`). From an API container, use the database service or managed database hostname reachable from that container; `localhost` inside a container refers to that same container.
+
+`SESSION_SECRET` is required in production and must contain at least 32 characters; placeholder values are rejected. It keys the HMAC used to store session token digests; the raw token is never stored. Generate a secret locally with `openssl rand -base64 48` and pass it through the runtime secret manager. The BE-052 switch from plain SHA-256 to keyed HMAC invalidates sessions created before this release, and rotating the secret later invalidates active sessions. Development has a clearly named development-only fallback so local setup remains compatible; production has no fallback.
+
+`CORS_ORIGINS` is a comma-separated list of complete HTTP(S) origins, with no paths. It defaults to `http://localhost:5173` only outside production. Production requires an explicit list and rejects wildcard and localhost origins. `PORT` defaults to `3000` and must be an integer from 1 through 65535. `NODE_ENV` accepts `development`, `test`, or `production`; the production Docker image sets it to `production`.
+
+The application validates these values while loading configuration, before opening its listener. Startup fails with a variable-specific message that never includes credential values.
+
+Local example (use `.env.example` as a template):
+
+```dotenv
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/DATABASE
+SESSION_SECRET=replace-with-at-least-32-random-characters
+CORS_ORIGINS=http://localhost:5173
+```
+
+Production example (provide through the container platform, not a committed file):
+
+```dotenv
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+SESSION_SECRET=REPLACE_WITH_A_STRONG_RANDOM_SECRET
+CORS_ORIGINS=https://your-frontend-domain.com
+```
+
+For example, pass a local environment file at runtime with `docker run --env-file .env.production ...`; keep that file outside Git and the Docker build context. The Dockerfile does not copy environment files or embed runtime credentials. BE-052 ran the backend suite (278 tests), typecheck, and production build successfully. Docker image/runtime verification could not run because the Docker daemon was unavailable on the development machine.
 
 ---
 

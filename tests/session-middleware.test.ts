@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app/app.js";
 import { env } from "../src/config/env.js";
 import type { AuthService } from "../src/modules/auth/auth.service.js";
 import type { SessionLookup } from "../src/modules/auth/session.middleware.js";
+import { hashSessionToken } from "../src/modules/auth/session-token.js";
 
 describe("session middleware", () => {
   let app: FastifyInstance | undefined;
@@ -43,7 +43,7 @@ describe("session middleware", () => {
       headers: { cookie: `${env.SESSION_COOKIE_NAME}=${token}` },
     });
 
-    expect(foundHash).toBe(createHash("sha256").update(token).digest("hex"));
+    expect(foundHash).toBe(hashSessionToken(token));
     expect(response.json()).toEqual({
       user: { id: "user-1", name: "Hanz", email: "hanz@example.com" },
     });

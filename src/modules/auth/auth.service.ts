@@ -1,5 +1,6 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import argon2 from "argon2";
+import { hashSessionToken } from "./session-token.js";
 import { AuthError } from "./auth.types.js";
 import type { LoginInput, RegisterInput } from "./auth.types.js";
 import type { AuthRepository } from "./auth.repository.js";
@@ -18,7 +19,7 @@ export function createAuthService(repository: AuthRepository) {
       }
       const passwordHash = await argon2.hash(input.password);
       const sessionToken = randomBytes(32).toString("base64url");
-      const sessionTokenHash = createHash("sha256").update(sessionToken).digest("hex");
+      const sessionTokenHash = hashSessionToken(sessionToken);
 
       try {
         const user = await repository.register({
@@ -48,7 +49,7 @@ export function createAuthService(repository: AuthRepository) {
       const sessionToken = randomBytes(32).toString("base64url");
       await repository.createSession({
         userId: user.id,
-        sessionTokenHash: createHash("sha256").update(sessionToken).digest("hex"),
+        sessionTokenHash: hashSessionToken(sessionToken),
         sessionExpiresAt: new Date(Date.now() + SESSION_TTL_MS),
       });
       return {
@@ -58,7 +59,7 @@ export function createAuthService(repository: AuthRepository) {
     },
     async logout(sessionToken: string | undefined): Promise<void> {
       if (!sessionToken) return;
-      const sessionTokenHash = createHash("sha256").update(sessionToken).digest("hex");
+      const sessionTokenHash = hashSessionToken(sessionToken);
       await repository.deleteSessionByTokenHash(sessionTokenHash);
     },
   };

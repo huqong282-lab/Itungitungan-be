@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { env } from "../../config/env.js";
+import { hashSessionToken } from "./session-token.js";
 import type { AuthenticatedUser } from "./auth.types.js";
 
 export type SessionLookup = (tokenHash: string) => Promise<{
@@ -21,7 +21,7 @@ export function createSessionMiddleware(findSessionByTokenHash: SessionLookup) {
     const token = request.cookies[env.SESSION_COOKIE_NAME];
     if (!token) return;
 
-    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const tokenHash = hashSessionToken(token);
     const session = await findSessionByTokenHash(tokenHash);
     if (!session || session.expiresAt.getTime() <= Date.now()) return;
 
