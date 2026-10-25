@@ -142,6 +142,24 @@ Jika action berhasil tetapi tidak membutuhkan response data:
 204 No Content
 ```
 
+### Health Check
+
+```http
+GET /api/health
+```
+
+Endpoint ini tidak membutuhkan authentication. Saat API process merespons, endpoint mengembalikan `200 OK`:
+
+```json
+{
+  "data": {
+    "status": "ok"
+  }
+}
+```
+
+Endpoint ini memeriksa respons API, bukan konektivitas database.
+
 ---
 
 ## 5. Error Response

@@ -940,6 +940,19 @@ Provide `DATABASE_URL` through the deployment platform's secret/environment conf
 
 After the job succeeds, verify with `docker run --rm --env DATABASE_URL itungitungan-be-migrations:${RELEASE} npm exec prisma migrate status`, then continue with the API rollout and health check. A second run is safe: successfully applied migrations are recorded and are not applied again. If the migration job fails, stop the rollout, inspect the migration and database state, and resolve the cause before retrying; do not reset or rebuild the production database. Keep application replicas from running migrations at startup so they cannot race each other.
 
+### Production backend health check
+
+The runtime Docker image probes `GET /api/health` on its configured `PORT` (default `3000`) every 30 seconds. The probe uses Node's built-in `fetch`, so it does not rely on development tools or extra packages in the runtime image. Deployment platforms should honor the image health status or configure their own HTTP probe to use the same path and container port.
+
+After the API container starts, verify its Docker health and the public HTTP response:
+
+```bash
+docker inspect --format '{{.State.Health.Status}}' "$CONTAINER_ID"
+curl --fail "$API_BASE_URL/api/health"
+```
+
+The HTTP response must be `200` with JSON `{ "data": { "status": "ok" } }`. The health endpoint is unauthenticated and confirms the API process is responding; it does not test database connectivity. Use the deployment platform's readiness/dependency checks separately if database availability must gate traffic.
+
 ---
 
 ## 32. Development Workflow
