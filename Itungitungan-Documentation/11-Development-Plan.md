@@ -1388,14 +1388,18 @@ npx prisma migrate dev
 Production:
 
 ```text
-Deploy committed migrations
+Build migration runner from the release commit
         ↓
-Apply migration
+Run one deployment job: prisma migrate deploy
         ↓
-Start application
+Verify: prisma migrate status
+        ↓
+Start/roll out application replicas
 ```
 
-Migration files harus committed ke Git.
+The migration job receives `DATABASE_URL` from the deployment secret/environment configuration. It runs once before API replicas start or are replaced; migrations must not run in application startup or concurrently across replicas. Production must never run `prisma migrate dev`, `prisma migrate reset`, or `prisma db push`. If migration deployment fails, stop the rollout and inspect the database and migration state before retrying; do not reset production data.
+
+Migration files must be committed to Git. Prisma 7 uses `prisma.config.ts` to select `prisma/schema.prisma`, `prisma/migrations`, and `DATABASE_URL`.
 
 Migration lama tidak diedit setelah digunakan bersama.
 

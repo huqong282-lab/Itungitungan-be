@@ -927,6 +927,19 @@ CORS_ORIGINS=https://your-frontend-domain.com
 
 For example, pass a local environment file at runtime with `docker run --env-file .env.production ...`; keep that file outside Git and the Docker build context. The Dockerfile does not copy environment files or embed runtime credentials. BE-052 ran the backend suite (278 tests), typecheck, and production build successfully. Docker image/runtime verification could not run because the Docker daemon was unavailable on the development machine.
 
+### Production database migrations
+
+Run database migrations as a single deployment job before starting or replacing API replicas. Build the migration runner from the same release commit as the API image, then run it once:
+
+```bash
+docker build --target migration-deploy -t itungitungan-be-migrations:${RELEASE} .
+docker run --rm --env DATABASE_URL itungitungan-be-migrations:${RELEASE}
+```
+
+Provide `DATABASE_URL` through the deployment platform's secret/environment configuration. The migration job only needs this variable; do not pass credentials as Docker build arguments or bake them into the image. Prisma 7 reads the committed `prisma/schema.prisma`, `prisma/migrations` directory, and datasource URL from `prisma.config.ts`. The job runs `prisma migrate deploy`, which applies committed pending migrations and records their status in the database. Do not run `prisma migrate dev`, `prisma migrate reset`, or `prisma db push` in production.
+
+After the job succeeds, verify with `docker run --rm --env DATABASE_URL itungitungan-be-migrations:${RELEASE} npm exec prisma migrate status`, then continue with the API rollout and health check. A second run is safe: successfully applied migrations are recorded and are not applied again. If the migration job fails, stop the rollout, inspect the migration and database state, and resolve the cause before retrying; do not reset or rebuild the production database. Keep application replicas from running migrations at startup so they cannot race each other.
+
 ---
 
 ## 32. Development Workflow
